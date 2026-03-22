@@ -44,11 +44,13 @@ Not completed:
 
 Use the foundation Beads epic to implement:
 
-1. richer ERP draft/revision flows on top of the semantic connector
-2. ingest normalization and proposal generation
+1. ingest normalization and proposal generation
+2. richer ERP draft/revision flows on top of the semantic connector
 3. the first runnable ERP-backed CLI loop
 4. the first runnable service wiring into `nix-dotfiles`
 
 Current Beads child tasks:
 
-- none yet beyond the current foundation epic; create the next implementation tasks from the now-complete runtime/config, ERP connector, and artifact baseline
+- `coordinator-326.16`: ingest normalization and proposal pipeline
+- `coordinator-326.15`: quote drafting and revision orchestration
+- `coordinator-326.17`: first service entrypoint and NixOS unit wiring

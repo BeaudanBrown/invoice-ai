@@ -35,6 +35,9 @@ Stand up the `invoice-ai` project as a tracked, Nix-native repository and solidi
 ## Beads
 
 - Epic: `coordinator-326`
+- `coordinator-326.16`: implement ingest normalization and proposal pipeline
+- `coordinator-326.15`: implement quote drafting and revision orchestration
+- `coordinator-326.17`: wire the first service entrypoint and NixOS unit
 - `coordinator-326.13`: implement ERP connector skeleton for semantic tools
 - `coordinator-326.14`: implement approval artifact store and quote preview stub
 
