@@ -20,6 +20,7 @@ Useful commands:
 ```bash
 nix run . -- show-config
 nix run . -- init-paths
+nix run . -- run-tool --request-file request.json
 ```
 
 Environment contract:
@@ -41,6 +42,29 @@ Environment contract:
 - `INVOICE_AI_OLLAMA_URL`
 - `INVOICE_AI_DOCLING_URL`
 - `INVOICE_AI_N8N_URL`
+
+## Current ERP Connector Surface
+
+The current semantic ERP connector lives under `src/invoice_ai/erp/` and exposes:
+
+- request/response envelopes for semantic ERP tools
+- an `ERPNext` HTTP client using standard `/api/resource/*` and `/api/method/upload_file`
+- a tool executor for:
+  - `erp.get_doc`
+  - `erp.list_docs`
+  - `erp.get_linked_context`
+  - `erp.get_pricing_context`
+  - `erp.create_draft_quotation`
+  - `erp.update_draft_quotation`
+  - `erp.create_draft_purchase_invoice`
+  - `erp.attach_file`
+
+The CLI entrypoint for this layer is:
+
+```bash
+INVOICE_AI_ERPNEXT_URL=http://erpnext.local \
+  nix run . -- run-tool --request-file request.json
+```
 
 `invoice-ai` is a self-hosted, open-source, Nix-native invoicing workspace for AI-assisted accounts receivable and accounts payable flows.
 

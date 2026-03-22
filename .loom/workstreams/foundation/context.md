@@ -43,4 +43,9 @@ Stand up the `invoice-ai` project as a tracked, Nix-native repository and solidi
 - `src/invoice_ai/config.py` resolves service settings, dependency endpoints, and path settings from environment variables
 - `src/invoice_ai/paths.py` defines the persistent runtime path model and can create the required directory tree
 - `src/invoice_ai/cli.py` currently exposes `show-config` and `init-paths`
+- `src/invoice_ai/erp/client.py` implements the first ERPNext transport layer over standard REST endpoints
+- `src/invoice_ai/erp/schemas.py` defines the semantic tool envelopes and approval payload model
+- `src/invoice_ai/erp/tools.py` dispatches the first semantic ERP tool set
+- `src/invoice_ai/cli.py` now also exposes `run-tool` for JSON tool execution
 - `nix run . -- show-config` and `nix run . -- init-paths` are the current smoke tests
+- `nix run . -- run-tool --request-file ...` is the current semantic ERP connector test seam

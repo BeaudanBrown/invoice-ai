@@ -25,24 +25,26 @@ Completed:
 - added the first code-facing implementation plan and a real placeholder `invoice-ai` package entrypoint in the flake
 - implemented the first application code scaffold under `src/invoice_ai/` for runtime configuration, dependency endpoint loading, and state-path resolution
 - updated the flake package so `nix run . -- show-config` and `nix run . -- init-paths` exercise the runtime scaffold through the packaged CLI
+- implemented the first ERP connector skeleton under `src/invoice_ai/erp/` with request/response envelopes, an ERPNext client, and semantic tool handlers for reads, pricing context, draft quotation creation/update, purchase-invoice drafting, and file attachment
+- added `nix run . -- run-tool --request-file ...` as the first CLI seam for semantic ERP tool execution
+- verified the connector against a disposable local mock ERP API for `erp.get_doc`, `erp.get_pricing_context`, `erp.create_draft_quotation`, and the approval-required purchase-invoice path
 
 Not completed:
 
-- no ERP connector implementation exists yet
 - no deployment has been wired into `nix-dotfiles` yet
 - no exact retention policy has been implemented in code yet
-- no real application code exists yet for intake normalization, approval artifact generation, or quote PDF rendering
+- no real application code exists yet for intake normalization, approval artifact persistence, or quote PDF rendering
+- the ERP connector still needs richer approval-artifact writing and broader ERP tool coverage
 
 ## Next Action
 
 Use the foundation Beads epic to implement:
 
-1. the ERP connector skeleton for semantic tools
-2. the approval artifact store and quote preview stub
+1. the approval artifact store and quote preview stub
+2. richer ERP draft/revision flows on top of the semantic connector
 3. the first runnable ERP-backed CLI loop
 4. the first runnable service wiring into `nix-dotfiles`
 
 Current Beads child tasks:
 
-- `coordinator-326.13`: ERP connector skeleton for semantic tools
 - `coordinator-326.14`: approval artifact store and quote preview stub
