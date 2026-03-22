@@ -17,19 +17,20 @@ Completed:
 - ratified the foundation product boundary, approval policy, ERP-first rule, delegated-agent model, and first vertical slice in repo docs
 - added explicit docs for the foundation spec, agent architecture, and memory model
 - added the first ERPNext entity map and draft revision model for quotes, invoices, projects, timesheets, purchase invoices, and pricing
+- added the first semantic ERP tool contract covering allowed draft writes, approval-gated actions, and approval artifact requirements
 
 Not completed:
 
 - no application implementation exists yet
 - no deployment has been wired into `nix-dotfiles` yet
-- no concrete agent-to-ERP tool contract has been written yet
 - no persistent memory layout under `/var/lib/invoice-ai/` has been finalized yet
+- no concrete request/response payload schema has been written for the ERP tools yet
 
 ## Next Action
 
 Use the foundation Beads epic to settle:
 
-1. the first agent-to-ERP tool contract
+1. the exact request/response payload schema for the ERP tools
 2. the first vertical slice from supplier invoice ingestion to quote drafting
 3. the persistent memory and review-artifact layout under `/var/lib/invoice-ai/`
 4. the concrete NixOS module contract for NAS hosting

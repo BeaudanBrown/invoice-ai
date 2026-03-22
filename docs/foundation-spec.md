@@ -42,6 +42,8 @@ The custom layer in this repo owns:
 
 The first concrete ERP mapping for these responsibilities lives in `docs/erpnext-entity-map.md`.
 
+The first semantic agent-to-ERP interface lives in `docs/erp-tool-contract.md`.
+
 ## Primary Interaction Model
 
 There is one user-facing agent.
