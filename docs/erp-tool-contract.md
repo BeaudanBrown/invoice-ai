@@ -248,3 +248,5 @@ The next implementation tasks should define:
 - exact request and response payloads for each tool
 - exact approval artifact file layout under `/var/lib/invoice-ai/`
 - exact mapping from semantic tools to ERPNext REST endpoints and allowlisted methods
+
+The first payload layer now lives in `docs/erp-tool-schemas.md`.

@@ -64,6 +64,7 @@ Target flow:
 - `docs/foundation-spec.md`
 - `docs/erpnext-entity-map.md`
 - `docs/erp-tool-contract.md`
+- `docs/erp-tool-schemas.md`
 - `docs/agent-architecture.md`
 - `docs/memory.md`
 - `docs/storage-layout.md`

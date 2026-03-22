@@ -18,6 +18,7 @@ Completed:
 - added explicit docs for the foundation spec, agent architecture, and memory model
 - added the first ERPNext entity map and draft revision model for quotes, invoices, projects, timesheets, purchase invoices, and pricing
 - added the first semantic ERP tool contract covering allowed draft writes, approval-gated actions, and approval artifact requirements
+- added the first ERP tool payload schemas for the connector-facing semantic tool layer
 - defined the persistent storage layout under `/var/lib/invoice-ai/` and aligned the NixOS module with the first subdirectory contract
 - specified the first supplier-ingestion-to-quote vertical slice as an implementation-ready workflow
 
@@ -25,7 +26,6 @@ Not completed:
 
 - no application implementation exists yet
 - no deployment has been wired into `nix-dotfiles` yet
-- no concrete request/response payload schema has been written for the ERP tools yet
 - no exact retention policy has been implemented in code yet
 - no code exists yet for the intake, ERP connector, approval artifact generation, or quote PDF path
 

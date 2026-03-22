@@ -44,6 +44,8 @@ The first concrete ERP mapping for these responsibilities lives in `docs/erpnext
 
 The first semantic agent-to-ERP interface lives in `docs/erp-tool-contract.md`.
 
+The first concrete payload schemas for that interface live in `docs/erp-tool-schemas.md`.
+
 ## Primary Interaction Model
 
 There is one user-facing agent.

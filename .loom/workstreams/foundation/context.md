@@ -23,6 +23,7 @@ Stand up the `invoice-ai` project as a tracked, Nix-native repository and solidi
 - `docs/foundation-spec.md`
 - `docs/erpnext-entity-map.md`
 - `docs/erp-tool-contract.md`
+- `docs/erp-tool-schemas.md`
 - `docs/agent-architecture.md`
 - `docs/memory.md`
 - `docs/storage-layout.md`
