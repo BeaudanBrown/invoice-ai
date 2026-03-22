@@ -26,6 +26,8 @@ The exact on-disk layout can evolve, but it should be:
 - readable by the application service
 - separate from immutable repo content
 
+The first concrete storage layout now lives in `docs/storage-layout.md`.
+
 ## Memory Types
 
 ### Operator Memory

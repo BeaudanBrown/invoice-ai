@@ -18,13 +18,14 @@ Completed:
 - added explicit docs for the foundation spec, agent architecture, and memory model
 - added the first ERPNext entity map and draft revision model for quotes, invoices, projects, timesheets, purchase invoices, and pricing
 - added the first semantic ERP tool contract covering allowed draft writes, approval-gated actions, and approval artifact requirements
+- defined the persistent storage layout under `/var/lib/invoice-ai/` and aligned the NixOS module with the first subdirectory contract
 
 Not completed:
 
 - no application implementation exists yet
 - no deployment has been wired into `nix-dotfiles` yet
-- no persistent memory layout under `/var/lib/invoice-ai/` has been finalized yet
 - no concrete request/response payload schema has been written for the ERP tools yet
+- no exact retention policy has been implemented in code yet
 
 ## Next Action
 
@@ -32,12 +33,10 @@ Use the foundation Beads epic to settle:
 
 1. the exact request/response payload schema for the ERP tools
 2. the first vertical slice from supplier invoice ingestion to quote drafting
-3. the persistent memory and review-artifact layout under `/var/lib/invoice-ai/`
-4. the concrete NixOS module contract for NAS hosting
+3. the concrete NixOS module contract for NAS hosting
+4. the first implementation slice after planning is complete
 
 Current Beads child tasks:
 
-- `coordinator-326.5`: ERPNext entities and revision model
-- `coordinator-326.6`: agent-to-ERP tool contract and approval gates
 - `coordinator-326.7`: persistent memory and review-artifact layout
 - `coordinator-326.8`: first supplier-ingestion-to-quote vertical slice

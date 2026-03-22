@@ -66,4 +66,5 @@ Target flow:
 - `docs/erp-tool-contract.md`
 - `docs/agent-architecture.md`
 - `docs/memory.md`
+- `docs/storage-layout.md`
 - `docs/decisions/foundation-open-questions.md`
