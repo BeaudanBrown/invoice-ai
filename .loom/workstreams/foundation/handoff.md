@@ -33,13 +33,12 @@ Not completed:
 
 Use the foundation Beads epic to settle:
 
-1. the exact request/response payload schema for the ERP tools
-2. the concrete NixOS module contract for NAS hosting
+1. the concrete NixOS module contract for NAS hosting
+2. the first code-facing execution plan for the ERP connector and drafting loop
 3. the first implementation slice after planning is complete
-4. the first code-facing execution plan for the ERP connector and drafting loop
+4. the exact retention behavior for transient revisions and artifacts
 
 Current Beads child tasks:
 
-- `coordinator-326.9`: ERP tool request and response payload schemas
 - `coordinator-326.10`: concrete NixOS module service composition
 - `coordinator-326.11`: first code-facing connector and drafting implementation
