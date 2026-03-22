@@ -4,6 +4,9 @@ import argparse
 import json
 import sys
 
+from .approvals.store import ApprovalStore
+from .artifacts.models import QuotePreview
+from .artifacts.pdf import QuotePreviewRenderer
 from .config import RuntimeConfig
 from .erp.schemas import ToolRequest
 from .erp.tools import ERPToolExecutor
@@ -37,7 +40,23 @@ def build_parser() -> argparse.ArgumentParser:
         default="-",
         help="Path to a JSON request envelope. Use - for stdin.",
     )
+    run_tool.add_argument(
+        "--write-approval-artifacts",
+        action="store_true",
+        help="Persist approval artifacts when the tool result requires approval.",
+    )
     run_tool.set_defaults(handler=handle_run_tool)
+
+    render_quote = subparsers.add_parser(
+        "render-quote-preview",
+        help="Render a deterministic quote-preview PDF from a JSON payload.",
+    )
+    render_quote.add_argument(
+        "--input-file",
+        default="-",
+        help="Path to a quote-preview JSON payload. Use - for stdin.",
+    )
+    render_quote.set_defaults(handler=handle_render_quote_preview)
 
     return parser
 
@@ -58,8 +77,32 @@ def handle_init_paths(_args: argparse.Namespace) -> int:
 def handle_run_tool(args: argparse.Namespace) -> int:
     payload = _read_request_payload(args.request_file)
     request = ToolRequest.from_dict(payload)
-    executor = ERPToolExecutor.from_runtime_config(RuntimeConfig.from_env())
-    print(executor.execute(request).to_json_text())
+    config = RuntimeConfig.from_env()
+    executor = ERPToolExecutor.from_runtime_config(config)
+    response = executor.execute(request)
+    if args.write_approval_artifacts and response.approval is not None:
+        ApprovalStore(config.paths.approvals_dir).write(response)
+    print(response.to_json_text())
+    return 0
+
+
+def handle_render_quote_preview(args: argparse.Namespace) -> int:
+    config = RuntimeConfig.from_env()
+    payload = _read_request_payload(args.input_file)
+    preview = QuotePreview.from_dict(payload)
+    output_path = QuotePreviewRenderer(config.paths.artifacts_dir).render(preview)
+    print(
+        json.dumps(
+            {
+                "draft_key": preview.draft_key,
+                "output_path": str(output_path),
+                "currency": preview.currency,
+                "total": round(preview.total, 2),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
     return 0
 
 

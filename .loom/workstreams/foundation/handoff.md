@@ -28,23 +28,27 @@ Completed:
 - implemented the first ERP connector skeleton under `src/invoice_ai/erp/` with request/response envelopes, an ERPNext client, and semantic tool handlers for reads, pricing context, draft quotation creation/update, purchase-invoice drafting, and file attachment
 - added `nix run . -- run-tool --request-file ...` as the first CLI seam for semantic ERP tool execution
 - verified the connector against a disposable local mock ERP API for `erp.get_doc`, `erp.get_pricing_context`, `erp.create_draft_quotation`, and the approval-required purchase-invoice path
+- implemented the first filesystem-backed approval artifact writer under `src/invoice_ai/approvals/`
+- implemented the first deterministic quote-preview PDF renderer under `src/invoice_ai/artifacts/`
+- extended the CLI so `run-tool --write-approval-artifacts` materializes approval requests on disk and `render-quote-preview` writes a preview PDF into the configured artifacts tree
 
 Not completed:
 
 - no deployment has been wired into `nix-dotfiles` yet
 - no exact retention policy has been implemented in code yet
-- no real application code exists yet for intake normalization, approval artifact persistence, or quote PDF rendering
-- the ERP connector still needs richer approval-artifact writing and broader ERP tool coverage
+- no real application code exists yet for intake normalization or quote/invoice revision orchestration
+- the ERP connector still needs broader semantic tool coverage and tighter ERPNext field mappings
+- the current quote preview renderer is a deterministic stub, not a production template
 
 ## Next Action
 
 Use the foundation Beads epic to implement:
 
-1. the approval artifact store and quote preview stub
-2. richer ERP draft/revision flows on top of the semantic connector
+1. richer ERP draft/revision flows on top of the semantic connector
+2. ingest normalization and proposal generation
 3. the first runnable ERP-backed CLI loop
 4. the first runnable service wiring into `nix-dotfiles`
 
 Current Beads child tasks:
 
-- `coordinator-326.14`: approval artifact store and quote preview stub
+- none yet beyond the current foundation epic; create the next implementation tasks from the now-complete runtime/config, ERP connector, and artifact baseline

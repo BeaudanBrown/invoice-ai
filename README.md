@@ -21,6 +21,7 @@ Useful commands:
 nix run . -- show-config
 nix run . -- init-paths
 nix run . -- run-tool --request-file request.json
+nix run . -- render-quote-preview --input-file quote.json
 ```
 
 Environment contract:
@@ -65,6 +66,17 @@ The CLI entrypoint for this layer is:
 INVOICE_AI_ERPNEXT_URL=http://erpnext.local \
   nix run . -- run-tool --request-file request.json
 ```
+
+Approval artifacts can be written during tool execution with:
+
+```bash
+INVOICE_AI_ERPNEXT_URL=http://erpnext.local \
+  nix run . -- run-tool --request-file request.json --write-approval-artifacts
+```
+
+Quote preview artifacts currently render to:
+
+- `${INVOICE_AI_ARTIFACTS_DIR:-$INVOICE_AI_STATE_DIR/artifacts}/quotes/<draft-key>/preview.pdf`
 
 `invoice-ai` is a self-hosted, open-source, Nix-native invoicing workspace for AI-assisted accounts receivable and accounts payable flows.
 
