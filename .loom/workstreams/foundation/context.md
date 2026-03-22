@@ -35,6 +35,12 @@ Stand up the `invoice-ai` project as a tracked, Nix-native repository and solidi
 ## Beads
 
 - Epic: `coordinator-326`
-- `coordinator-326.12`: implement runtime config and path handling scaffold
 - `coordinator-326.13`: implement ERP connector skeleton for semantic tools
 - `coordinator-326.14`: implement approval artifact store and quote preview stub
+
+## Current Implementation State
+
+- `src/invoice_ai/config.py` resolves service settings, dependency endpoints, and path settings from environment variables
+- `src/invoice_ai/paths.py` defines the persistent runtime path model and can create the required directory tree
+- `src/invoice_ai/cli.py` currently exposes `show-config` and `init-paths`
+- `nix run . -- show-config` and `nix run . -- init-paths` are the current smoke tests

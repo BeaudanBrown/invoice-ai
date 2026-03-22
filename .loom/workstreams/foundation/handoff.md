@@ -23,25 +23,26 @@ Completed:
 - defined the concrete NixOS module service boundary, dependency inputs, runtime user/group, and host-owned versus repo-owned settings
 - specified the first supplier-ingestion-to-quote vertical slice as an implementation-ready workflow
 - added the first code-facing implementation plan and a real placeholder `invoice-ai` package entrypoint in the flake
+- implemented the first application code scaffold under `src/invoice_ai/` for runtime configuration, dependency endpoint loading, and state-path resolution
+- updated the flake package so `nix run . -- show-config` and `nix run . -- init-paths` exercise the runtime scaffold through the packaged CLI
 
 Not completed:
 
-- no application implementation exists yet
+- no ERP connector implementation exists yet
 - no deployment has been wired into `nix-dotfiles` yet
 - no exact retention policy has been implemented in code yet
-- no real application code exists yet for the intake, ERP connector, approval artifact generation, or quote PDF path
+- no real application code exists yet for intake normalization, approval artifact generation, or quote PDF rendering
 
 ## Next Action
 
-Use the foundation Beads epic to settle:
+Use the foundation Beads epic to implement:
 
-1. the runtime config and path handling scaffold
-2. the ERP connector skeleton for semantic tools
-3. the approval artifact store and quote preview stub
+1. the ERP connector skeleton for semantic tools
+2. the approval artifact store and quote preview stub
+3. the first runnable ERP-backed CLI loop
 4. the first runnable service wiring into `nix-dotfiles`
 
 Current Beads child tasks:
 
-- `coordinator-326.12`: runtime config and path handling scaffold
 - `coordinator-326.13`: ERP connector skeleton for semantic tools
 - `coordinator-326.14`: approval artifact store and quote preview stub

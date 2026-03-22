@@ -1,5 +1,47 @@
 # invoice-ai
 
+Nix-native self-hosted AI invoicing workspace.
+
+## Current Status
+
+The repository currently exposes:
+
+- a flake package with a minimal `invoice-ai` CLI
+- a NixOS module under `modules/invoice-ai.nix`
+- implementation specs for the first ERP-first vertical slice
+
+## Runtime Scaffold
+
+The current application scaffold can resolve runtime configuration and state
+paths from environment variables that match the NixOS module contract.
+
+Useful commands:
+
+```bash
+nix run . -- show-config
+nix run . -- init-paths
+```
+
+Environment contract:
+
+- `INVOICE_AI_LISTEN_ADDRESS`
+- `INVOICE_AI_PORT`
+- `INVOICE_AI_PUBLIC_URL`
+- `INVOICE_AI_HOST_NAME`
+- `INVOICE_AI_STATE_DIR`
+- `INVOICE_AI_DOCUMENTS_DIR`
+- `INVOICE_AI_MEMORY_DIR`
+- `INVOICE_AI_INGEST_DIR`
+- `INVOICE_AI_APPROVALS_DIR`
+- `INVOICE_AI_REVISIONS_DIR`
+- `INVOICE_AI_ARTIFACTS_DIR`
+- `INVOICE_AI_CACHE_DIR`
+- `INVOICE_AI_ERPNEXT_URL`
+- `INVOICE_AI_ERPNEXT_CREDENTIALS_FILE`
+- `INVOICE_AI_OLLAMA_URL`
+- `INVOICE_AI_DOCLING_URL`
+- `INVOICE_AI_N8N_URL`
+
 `invoice-ai` is a self-hosted, open-source, Nix-native invoicing workspace for AI-assisted accounts receivable and accounts payable flows.
 
 The target system should be able to:

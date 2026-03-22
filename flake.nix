@@ -16,7 +16,11 @@
       perSystem = { pkgs, ... }: {
         packages.default = pkgs.writeShellApplication {
           name = "invoice-ai";
-          text = builtins.readFile ./bin/invoice-ai;
+          runtimeInputs = [ pkgs.python3 ];
+          text = ''
+            export PYTHONPATH="${./src}:''${PYTHONPATH:-}"
+            exec python3 ${./bin/invoice-ai} "$@"
+          '';
         };
 
         devShells.default = pkgs.mkShell {
@@ -25,6 +29,7 @@
             just
             nil
             nixfmt
+            python3
           ];
         };
       };
