@@ -16,19 +16,20 @@ Completed:
 - created coordinator Beads epic `coordinator-326` with the first architecture-decision child tasks
 - ratified the foundation product boundary, approval policy, ERP-first rule, delegated-agent model, and first vertical slice in repo docs
 - added explicit docs for the foundation spec, agent architecture, and memory model
+- added the first ERPNext entity map and draft revision model for quotes, invoices, projects, timesheets, purchase invoices, and pricing
 
 Not completed:
 
 - no application implementation exists yet
 - no deployment has been wired into `nix-dotfiles` yet
-- no concrete ERP entity mapping or API contract has been written yet
+- no concrete agent-to-ERP tool contract has been written yet
 - no persistent memory layout under `/var/lib/invoice-ai/` has been finalized yet
 
 ## Next Action
 
 Use the foundation Beads epic to settle:
 
-1. the first ERP entity mapping and API contract
+1. the first agent-to-ERP tool contract
 2. the first vertical slice from supplier invoice ingestion to quote drafting
 3. the persistent memory and review-artifact layout under `/var/lib/invoice-ai/`
 4. the concrete NixOS module contract for NAS hosting

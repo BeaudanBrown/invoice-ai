@@ -34,6 +34,7 @@ This repository is currently in foundation mode. The core architecture decisions
 - `AGENTS.md`
 - `docs/architecture.md`
 - `docs/foundation-spec.md`
+- `docs/erpnext-entity-map.md`
 - `docs/agent-architecture.md`
 - `docs/memory.md`
 - `docs/decisions/foundation-open-questions.md`

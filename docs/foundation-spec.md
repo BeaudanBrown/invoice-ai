@@ -40,6 +40,8 @@ The custom layer in this repo owns:
 - review artifacts and diffs
 - markdown-based natural-language memory
 
+The first concrete ERP mapping for these responsibilities lives in `docs/erpnext-entity-map.md`.
+
 ## Primary Interaction Model
 
 There is one user-facing agent.
