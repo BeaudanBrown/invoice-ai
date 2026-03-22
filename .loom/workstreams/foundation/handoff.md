@@ -40,5 +40,6 @@ Use the foundation Beads epic to settle:
 
 Current Beads child tasks:
 
-- `coordinator-326.7`: persistent memory and review-artifact layout
-- `coordinator-326.8`: first supplier-ingestion-to-quote vertical slice
+- `coordinator-326.9`: ERP tool request and response payload schemas
+- `coordinator-326.10`: concrete NixOS module service composition
+- `coordinator-326.11`: first code-facing connector and drafting implementation

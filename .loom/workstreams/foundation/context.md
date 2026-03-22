@@ -32,7 +32,6 @@ Stand up the `invoice-ai` project as a tracked, Nix-native repository and solidi
 ## Beads
 
 - Epic: `coordinator-326`
-- `coordinator-326.5`: map ERPNext entities and the revision model
-- `coordinator-326.6`: define the agent-to-ERP tool contract and approval gates
-- `coordinator-326.7`: define the persistent memory and review-artifact layout
-- `coordinator-326.8`: specify the first supplier-ingestion-to-quote vertical slice
+- `coordinator-326.9`: define ERP tool request and response payload schemas
+- `coordinator-326.10`: define concrete NixOS module service composition
+- `coordinator-326.11`: plan the first code-facing connector and drafting implementation

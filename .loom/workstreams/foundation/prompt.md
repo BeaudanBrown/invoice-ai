@@ -27,7 +27,6 @@ Current priority:
 Beads references:
 
 - epic `coordinator-326`
-- `coordinator-326.5`
-- `coordinator-326.6`
-- `coordinator-326.7`
-- `coordinator-326.8`
+- `coordinator-326.9`
+- `coordinator-326.10`
+- `coordinator-326.11`
