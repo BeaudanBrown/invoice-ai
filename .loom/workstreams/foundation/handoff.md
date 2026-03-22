@@ -19,6 +19,7 @@ Completed:
 - added the first ERPNext entity map and draft revision model for quotes, invoices, projects, timesheets, purchase invoices, and pricing
 - added the first semantic ERP tool contract covering allowed draft writes, approval-gated actions, and approval artifact requirements
 - defined the persistent storage layout under `/var/lib/invoice-ai/` and aligned the NixOS module with the first subdirectory contract
+- specified the first supplier-ingestion-to-quote vertical slice as an implementation-ready workflow
 
 Not completed:
 
@@ -26,15 +27,16 @@ Not completed:
 - no deployment has been wired into `nix-dotfiles` yet
 - no concrete request/response payload schema has been written for the ERP tools yet
 - no exact retention policy has been implemented in code yet
+- no code exists yet for the intake, ERP connector, approval artifact generation, or quote PDF path
 
 ## Next Action
 
 Use the foundation Beads epic to settle:
 
 1. the exact request/response payload schema for the ERP tools
-2. the first vertical slice from supplier invoice ingestion to quote drafting
-3. the concrete NixOS module contract for NAS hosting
-4. the first implementation slice after planning is complete
+2. the concrete NixOS module contract for NAS hosting
+3. the first implementation slice after planning is complete
+4. the first code-facing execution plan for the ERP connector and drafting loop
 
 Current Beads child tasks:
 

@@ -39,6 +39,7 @@ This repository is currently in foundation mode. The core architecture decisions
 - `docs/agent-architecture.md`
 - `docs/memory.md`
 - `docs/storage-layout.md`
+- `docs/vertical-slice-1.md`
 - `docs/decisions/foundation-open-questions.md`
 - `.loom/workstreams/foundation/context.md`
 - `.loom/workstreams/foundation/handoff.md`

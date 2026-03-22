@@ -67,4 +67,5 @@ Target flow:
 - `docs/agent-architecture.md`
 - `docs/memory.md`
 - `docs/storage-layout.md`
+- `docs/vertical-slice-1.md`
 - `docs/decisions/foundation-open-questions.md`
