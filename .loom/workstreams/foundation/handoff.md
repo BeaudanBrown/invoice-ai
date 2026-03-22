@@ -20,6 +20,7 @@ Completed:
 - added the first semantic ERP tool contract covering allowed draft writes, approval-gated actions, and approval artifact requirements
 - added the first ERP tool payload schemas for the connector-facing semantic tool layer
 - defined the persistent storage layout under `/var/lib/invoice-ai/` and aligned the NixOS module with the first subdirectory contract
+- defined the concrete NixOS module service boundary, dependency inputs, runtime user/group, and host-owned versus repo-owned settings
 - specified the first supplier-ingestion-to-quote vertical slice as an implementation-ready workflow
 
 Not completed:
@@ -33,10 +34,10 @@ Not completed:
 
 Use the foundation Beads epic to settle:
 
-1. the concrete NixOS module contract for NAS hosting
-2. the first code-facing execution plan for the ERP connector and drafting loop
-3. the first implementation slice after planning is complete
-4. the exact retention behavior for transient revisions and artifacts
+1. the first code-facing execution plan for the ERP connector and drafting loop
+2. the first implementation slice after planning is complete
+3. the exact retention behavior for transient revisions and artifacts
+4. the first runnable service wiring into `nix-dotfiles`
 
 Current Beads child tasks:
 

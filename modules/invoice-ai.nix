@@ -16,6 +16,42 @@ in
       description = "Placeholder package for the future invoice-ai application bundle.";
     };
 
+    user = lib.mkOption {
+      type = lib.types.str;
+      default = "invoice-ai";
+      description = "Runtime user for the invoice-ai service.";
+    };
+
+    group = lib.mkOption {
+      type = lib.types.str;
+      default = "invoice-ai";
+      description = "Runtime group for the invoice-ai service.";
+    };
+
+    listenAddress = lib.mkOption {
+      type = lib.types.str;
+      default = "127.0.0.1";
+      description = "Listen address for the future invoice-ai control-plane service.";
+    };
+
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 4310;
+      description = "Listen port for the future invoice-ai control-plane service.";
+    };
+
+    publicUrl = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Optional externally reachable base URL exposed by the host.";
+    };
+
+    environmentFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Host-provided environment file containing runtime secrets and service credentials.";
+    };
+
     stateDir = lib.mkOption {
       type = lib.types.str;
       default = "/var/lib/invoice-ai";
@@ -69,22 +105,69 @@ in
       default = null;
       description = "Optional external hostname used by the deployed service.";
     };
+
+    erpnext = {
+      url = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Base URL for the ERPNext instance used by invoice-ai.";
+      };
+
+      credentialsFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Optional host-provided file containing ERPNext API credentials.";
+      };
+    };
+
+    ollama = {
+      url = lib.mkOption {
+        type = lib.types.str;
+        default = "http://127.0.0.1:11434";
+        description = "Base URL for the Ollama instance used for local inference.";
+      };
+    };
+
+    docling = {
+      url = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Optional base URL for a Docling service endpoint.";
+      };
+    };
+
+    n8n = {
+      url = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Optional base URL for an n8n instance used by future orchestration flows.";
+      };
+    };
   };
 
   config = lib.mkIf cfg.enable {
     warnings = [
-      "services.invoice-ai is currently a foundation-stage module placeholder; application services are not wired yet."
+      "services.invoice-ai currently defines the service boundary, runtime options, and persistence contract; the application systemd service is not wired yet."
     ];
 
+    users.groups.${cfg.group} = {};
+
+    users.users.${cfg.user} = {
+      isSystemUser = true;
+      group = cfg.group;
+      home = cfg.stateDir;
+      createHome = false;
+    };
+
     systemd.tmpfiles.rules = [
-      "d ${cfg.stateDir} 0750 root root - -"
-      "d ${cfg.documentsDir} 0750 root root - -"
-      "d ${cfg.memoryDir} 0750 root root - -"
-      "d ${cfg.ingestDir} 0750 root root - -"
-      "d ${cfg.approvalsDir} 0750 root root - -"
-      "d ${cfg.revisionsDir} 0750 root root - -"
-      "d ${cfg.artifactsDir} 0750 root root - -"
-      "d ${cfg.cacheDir} 0750 root root - -"
+      "d ${cfg.stateDir} 0750 ${cfg.user} ${cfg.group} - -"
+      "d ${cfg.documentsDir} 0750 ${cfg.user} ${cfg.group} - -"
+      "d ${cfg.memoryDir} 0750 ${cfg.user} ${cfg.group} - -"
+      "d ${cfg.ingestDir} 0750 ${cfg.user} ${cfg.group} - -"
+      "d ${cfg.approvalsDir} 0750 ${cfg.user} ${cfg.group} - -"
+      "d ${cfg.revisionsDir} 0750 ${cfg.user} ${cfg.group} - -"
+      "d ${cfg.artifactsDir} 0750 ${cfg.user} ${cfg.group} - -"
+      "d ${cfg.cacheDir} 0750 ${cfg.user} ${cfg.group} - -"
     ];
   };
 }
