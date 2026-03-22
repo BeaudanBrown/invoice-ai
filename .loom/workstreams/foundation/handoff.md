@@ -35,12 +35,13 @@ Not completed:
 
 Use the foundation Beads epic to settle:
 
-1. the first code-facing execution plan for the ERP connector and drafting loop
-2. the first implementation slice after planning is complete
-3. the exact retention behavior for transient revisions and artifacts
+1. the runtime config and path handling scaffold
+2. the ERP connector skeleton for semantic tools
+3. the approval artifact store and quote preview stub
 4. the first runnable service wiring into `nix-dotfiles`
 
 Current Beads child tasks:
 
-- `coordinator-326.10`: concrete NixOS module service composition
-- `coordinator-326.11`: first code-facing connector and drafting implementation
+- `coordinator-326.12`: runtime config and path handling scaffold
+- `coordinator-326.13`: ERP connector skeleton for semantic tools
+- `coordinator-326.14`: approval artifact store and quote preview stub

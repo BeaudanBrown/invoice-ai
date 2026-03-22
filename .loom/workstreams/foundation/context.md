@@ -35,5 +35,6 @@ Stand up the `invoice-ai` project as a tracked, Nix-native repository and solidi
 ## Beads
 
 - Epic: `coordinator-326`
-- `coordinator-326.10`: define concrete NixOS module service composition
-- `coordinator-326.11`: plan the first code-facing connector and drafting implementation
+- `coordinator-326.12`: implement runtime config and path handling scaffold
+- `coordinator-326.13`: implement ERP connector skeleton for semantic tools
+- `coordinator-326.14`: implement approval artifact store and quote preview stub
