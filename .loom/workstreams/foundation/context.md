@@ -29,6 +29,7 @@ Stand up the `invoice-ai` project as a tracked, Nix-native repository and solidi
 - `docs/nixos-module-contract.md`
 - `docs/storage-layout.md`
 - `docs/vertical-slice-1.md`
+- `docs/implementation-plan-1.md`
 - `docs/decisions/foundation-open-questions.md`
 
 ## Beads

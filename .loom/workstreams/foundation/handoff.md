@@ -22,13 +22,14 @@ Completed:
 - defined the persistent storage layout under `/var/lib/invoice-ai/` and aligned the NixOS module with the first subdirectory contract
 - defined the concrete NixOS module service boundary, dependency inputs, runtime user/group, and host-owned versus repo-owned settings
 - specified the first supplier-ingestion-to-quote vertical slice as an implementation-ready workflow
+- added the first code-facing implementation plan and a real placeholder `invoice-ai` package entrypoint in the flake
 
 Not completed:
 
 - no application implementation exists yet
 - no deployment has been wired into `nix-dotfiles` yet
 - no exact retention policy has been implemented in code yet
-- no code exists yet for the intake, ERP connector, approval artifact generation, or quote PDF path
+- no real application code exists yet for the intake, ERP connector, approval artifact generation, or quote PDF path
 
 ## Next Action
 

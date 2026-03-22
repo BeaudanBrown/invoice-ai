@@ -42,6 +42,7 @@ This repository is currently in foundation mode. The core architecture decisions
 - `docs/nixos-module-contract.md`
 - `docs/storage-layout.md`
 - `docs/vertical-slice-1.md`
+- `docs/implementation-plan-1.md`
 - `docs/decisions/foundation-open-questions.md`
 - `.loom/workstreams/foundation/context.md`
 - `.loom/workstreams/foundation/handoff.md`

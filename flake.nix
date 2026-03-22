@@ -14,10 +14,9 @@
       ];
 
       perSystem = { pkgs, ... }: {
-        packages.default = pkgs.writeTextFile {
-          name = "invoice-ai-foundation";
-          destination = "/share/doc/invoice-ai/README";
-          text = builtins.readFile ./README.md;
+        packages.default = pkgs.writeShellApplication {
+          name = "invoice-ai";
+          text = builtins.readFile ./bin/invoice-ai;
         };
 
         devShells.default = pkgs.mkShell {

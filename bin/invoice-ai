@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "invoice-ai scaffold is present, but the runtime service is not implemented yet."
+echo "See docs/implementation-plan-1.md for the next code-facing steps."
