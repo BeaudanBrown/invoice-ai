@@ -11,6 +11,7 @@ from .config import RuntimeConfig
 from .erp.schemas import ToolRequest
 from .erp.tools import ERPToolExecutor
 from .ingest.tools import IngestToolExecutor
+from .quotes.tools import QuoteToolExecutor
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -119,6 +120,8 @@ def _tool_executor_for(tool_name: str, config: RuntimeConfig) -> object:
         return ERPToolExecutor.from_runtime_config(config)
     if tool_name.startswith("ingest."):
         return IngestToolExecutor.from_runtime_config(config)
+    if tool_name.startswith("quotes."):
+        return QuoteToolExecutor.from_runtime_config(config)
     raise ValueError(f"Unsupported tool family for {tool_name}")
 
 

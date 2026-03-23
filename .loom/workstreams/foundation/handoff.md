@@ -33,12 +33,15 @@ Completed:
 - extended the CLI so `run-tool --write-approval-artifacts` materializes approval requests on disk and `render-quote-preview` writes a preview PDF into the configured artifacts tree
 - implemented the first ingest normalization tool under `src/invoice_ai/ingest/` with source models, ERP-backed supplier/item resolution, proposal shaping, and filesystem-backed ingest record persistence
 - extended the shared tool CLI so `ingest.normalize_supplier_invoice` can emit either a draft-ready ERP purchase-invoice request or an approval/review result
+- implemented the first quote orchestration tool layer under `src/invoice_ai/quotes/` with customer/item resolution, ERP-backed quote context gathering, draft quotation creation, and draft quotation revision
+- implemented the first filesystem-backed quotation revision store under `src/invoice_ai/revisions/` so working quote revisions persist outside ERPNext
+- extended the shared tool CLI so `quotes.prepare_context`, `quotes.create_draft`, and `quotes.revise_draft` can drive ERP-backed quotation workflows and refreshed preview artifacts
+- verified quote create, revise, and approval-required paths against a disposable local mock ERP API
 
 Not completed:
 
 - no deployment has been wired into `nix-dotfiles` yet
 - no exact retention policy has been implemented in code yet
-- no real application code exists yet for quote/invoice revision orchestration
 - the ERP connector still needs broader semantic tool coverage and tighter ERPNext field mappings
 - the current quote preview renderer is a deterministic stub, not a production template
 
@@ -46,12 +49,11 @@ Not completed:
 
 Use the foundation Beads epic to implement:
 
-1. richer ERP draft/revision flows on top of the semantic connector
-2. the first composed ingest-to-ERP loop that chains ingest and ERP tools end to end
-3. the first runnable ERP-backed CLI loop
-4. the first runnable service wiring into `nix-dotfiles`
+1. the first composed ingest-to-ERP loop that chains ingest and ERP tools end to end
+2. the first runnable ERP-backed CLI loop or service entrypoint above the tool layer
+3. the first runnable service wiring into `nix-dotfiles`
+4. tighter ERPNext field mappings and broader semantic tool coverage where the first vertical slice needs them
 
 Current Beads child tasks:
 
-- `coordinator-326.15`: quote drafting and revision orchestration
 - `coordinator-326.17`: first service entrypoint and NixOS unit wiring

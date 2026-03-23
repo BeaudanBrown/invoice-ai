@@ -92,6 +92,25 @@ That tool:
 - falls back to an approval/review response when master data is missing or low confidence
 - persists ingest records under `${INVOICE_AI_INGEST_DIR:-$INVOICE_AI_STATE_DIR/ingest}`
 
+## Current Quote Tool Surface
+
+The current quote orchestration layer lives under `src/invoice_ai/quotes/` and exposes:
+
+- `quotes.prepare_context`
+- `quotes.create_draft`
+- `quotes.revise_draft`
+
+That layer:
+
+- resolves customers and items against existing ERP data
+- gathers linked quotation, sales-invoice, project, and pricing context through the semantic ERP tools
+- creates draft quotations through `erp.create_draft_quotation`
+- revises existing draft quotations through `erp.update_draft_quotation`
+- renders a refreshed quote preview PDF after each accepted create or revise action
+- persists working revision snapshots under `${INVOICE_AI_REVISIONS_DIR:-$INVOICE_AI_STATE_DIR/revisions}/quotations/<draft-key>/`
+
+At the moment the quote layer expects structured quote intent payloads rather than free-form natural language. The chat-facing agent layer will sit above these tools later.
+
 `invoice-ai` is a self-hosted, open-source, Nix-native invoicing workspace for AI-assisted accounts receivable and accounts payable flows.
 
 The target system should be able to:
