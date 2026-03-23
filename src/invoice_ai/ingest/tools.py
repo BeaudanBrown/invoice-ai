@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 import uuid
 
 from ..config import RuntimeConfig
 from ..erp.client import ERPNextClient
 from ..erp.schemas import ApprovalPayload, ToolRequest, ToolResponse, approval_artifact_paths
+from ..erp.tools import ERPToolExecutor
 from .models import SupplierInvoiceInput
 from .normalize import SupplierInvoiceNormalizer
 from .store import IngestStore
@@ -17,22 +19,27 @@ class IngestToolExecutor:
         *,
         config: RuntimeConfig,
         erp_client: ERPNextClient | None = None,
+        erp_executor: ERPToolExecutor | None = None,
     ) -> None:
         self.config = config
         self.erp_client = erp_client
+        self.erp_executor = erp_executor
         self.normalizer = SupplierInvoiceNormalizer(erp_client)
         self.store = IngestStore(config.paths.ingest_dir)
 
     @classmethod
     def from_runtime_config(cls, config: RuntimeConfig) -> "IngestToolExecutor":
         erp_client = None
+        erp_executor = None
         if config.dependencies.erpnext_url is not None:
             erp_client = ERPNextClient.from_runtime_config(config)
-        return cls(config=config, erp_client=erp_client)
+            erp_executor = ERPToolExecutor(config=config, client=erp_client)
+        return cls(config=config, erp_client=erp_client, erp_executor=erp_executor)
 
     def execute(self, request: ToolRequest) -> ToolResponse:
         handlers = {
             "ingest.normalize_supplier_invoice": self.normalize_supplier_invoice,
+            "ingest.create_purchase_invoice_draft": self.create_purchase_invoice_draft,
         }
         handler = handlers.get(request.tool_name)
         if handler is None:
@@ -51,35 +58,148 @@ class IngestToolExecutor:
 
     def normalize_supplier_invoice(self, request: ToolRequest) -> ToolResponse:
         source = SupplierInvoiceInput.from_payload(request.request_id, request.payload)
-        normalized = self.normalizer.normalize(source)
+        normalized, record_dir = self._normalize_and_store(source=source, request_id=request.request_id)
         if normalized["resolved"]:
-            record_dir = self.store.write_processed(
-                request_id=request.request_id,
-                source=source.as_dict(),
-                normalized=normalized,
-            )
             return ToolResponse(
                 request_id=request.request_id,
                 tool_name=request.tool_name,
                 status="success",
                 data={
                     "normalized_invoice": normalized,
-                    "purchase_invoice_request": {
-                        "request_id": request.request_id,
-                        "tool_name": "erp.create_draft_purchase_invoice",
-                        "dry_run": request.dry_run,
-                        "conversation_context": request.conversation_context,
-                        "payload": normalized["purchase_invoice_payload"],
-                    },
+                    "purchase_invoice_request": self._purchase_invoice_request_dict(
+                        request=request,
+                        payload=normalized["purchase_invoice_payload"],
+                    ),
                 },
                 meta={"ingest_record_dir": str(record_dir)},
             )
 
-        record_dir = self.store.write_processed(
+        return self._approval_response(
+            request=request,
+            normalized=normalized,
+            record_dir=record_dir,
+        )
+
+    def create_purchase_invoice_draft(self, request: ToolRequest) -> ToolResponse:
+        source = SupplierInvoiceInput.from_payload(request.request_id, request.payload)
+        normalized, record_dir = self._normalize_and_store(source=source, request_id=request.request_id)
+        if not normalized["resolved"]:
+            response = self._approval_response(
+                request=request,
+                normalized=normalized,
+                record_dir=record_dir,
+            )
+            self._persist_composed_result(record_dir=record_dir, response=response)
+            return response
+
+        if self.erp_executor is None:
+            response = ToolResponse(
+                request_id=request.request_id,
+                tool_name=request.tool_name,
+                status="blocked",
+                errors=[
+                    {
+                        "code": "ingest.erp_unavailable",
+                        "message": "ERPNext is not configured for draft purchase invoice creation",
+                    }
+                ],
+                meta={"ingest_record_dir": str(record_dir)},
+            )
+            self._persist_composed_result(record_dir=record_dir, response=response)
+            return response
+
+        purchase_invoice_request = ToolRequest.from_dict(
+            self._purchase_invoice_request_dict(
+                request=request,
+                payload=normalized["purchase_invoice_payload"],
+            )
+        )
+        create_response = self.erp_executor.execute(purchase_invoice_request)
+        if create_response.status != "success":
+            response = ToolResponse(
+                request_id=request.request_id,
+                tool_name=request.tool_name,
+                status=create_response.status,
+                data={
+                    "normalized_invoice": normalized,
+                    "purchase_invoice_request": purchase_invoice_request.payload,
+                    "erp_create_response": create_response.as_dict(),
+                },
+                errors=create_response.errors,
+                warnings=create_response.warnings,
+                approval=create_response.approval,
+                meta={
+                    "ingest_record_dir": str(record_dir),
+                    **create_response.meta,
+                },
+            )
+            self._persist_composed_result(record_dir=record_dir, response=response)
+            return response
+
+        attachment_result: dict[str, Any] | None = None
+        warnings = list(create_response.warnings)
+        if (
+            bool(request.payload.get("attach_source_file", True))
+            and source.source_path
+            and create_response.data.get("doc_ref", {}).get("name")
+        ):
+            attachment_request = ToolRequest(
+                request_id=f"{request.request_id}-attach",
+                tool_name="erp.attach_file",
+                dry_run=request.dry_run,
+                payload={
+                    "target": create_response.data["doc_ref"],
+                    "source_path": source.source_path,
+                    "file_name": request.payload.get("file_name") or source.source_path.rsplit("/", 1)[-1],
+                    "is_private": bool(request.payload.get("is_private", True)),
+                },
+                conversation_context=request.conversation_context,
+            )
+            attachment_response = self.erp_executor.execute(attachment_request)
+            attachment_result = attachment_response.as_dict()
+            if attachment_response.status != "success":
+                warnings.append("Draft purchase invoice created but source attachment failed")
+
+        response = ToolResponse(
             request_id=request.request_id,
+            tool_name=request.tool_name,
+            status="success",
+            data={
+                "normalized_invoice": normalized,
+                "purchase_invoice": create_response.data,
+                "purchase_invoice_request": purchase_invoice_request.payload,
+                "attachment": attachment_result,
+            },
+            warnings=warnings,
+            meta={
+                "ingest_record_dir": str(record_dir),
+                **create_response.meta,
+            },
+        )
+        self._persist_composed_result(record_dir=record_dir, response=response)
+        return response
+
+    def _normalize_and_store(
+        self,
+        *,
+        source: SupplierInvoiceInput,
+        request_id: str,
+    ) -> tuple[dict[str, Any], Path]:
+        normalized = self.normalizer.normalize(source)
+        record_dir = self.store.write_processed(
+            request_id=request_id,
             source=source.as_dict(),
             normalized=normalized,
         )
+        return normalized, record_dir
+
+    def _approval_response(
+        self,
+        *,
+        request: ToolRequest,
+        normalized: dict[str, Any],
+        record_dir: Path,
+    ) -> ToolResponse:
         missing = normalized["missing_master_data"]
         approval_id = f"approval-{uuid.uuid4().hex}"
         approval = ApprovalPayload(
@@ -101,15 +221,39 @@ class IngestToolExecutor:
             status="approval_required",
             data={
                 "normalized_invoice": normalized,
-                "proposed_purchase_invoice_request": {
-                    "request_id": request.request_id,
-                    "tool_name": "erp.create_draft_purchase_invoice",
-                    "dry_run": True,
-                    "conversation_context": request.conversation_context,
-                    "payload": normalized["purchase_invoice_payload"],
-                },
+                "proposed_purchase_invoice_request": self._purchase_invoice_request_dict(
+                    request=request,
+                    payload=normalized["purchase_invoice_payload"],
+                    dry_run=True,
+                ),
             },
             warnings=warnings,
             approval=approval,
             meta={"ingest_record_dir": str(record_dir)},
+        )
+
+    def _purchase_invoice_request_dict(
+        self,
+        *,
+        request: ToolRequest,
+        payload: dict[str, Any] | None,
+        dry_run: bool | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "request_id": request.request_id,
+            "tool_name": "erp.create_draft_purchase_invoice",
+            "dry_run": request.dry_run if dry_run is None else dry_run,
+            "conversation_context": request.conversation_context,
+            "payload": payload or {},
+        }
+
+    def _persist_composed_result(
+        self,
+        *,
+        record_dir: Path,
+        response: ToolResponse,
+    ) -> None:
+        self.store.write_composed_result(
+            record_dir=record_dir,
+            result=response.as_dict(),
         )

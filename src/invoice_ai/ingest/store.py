@@ -29,6 +29,20 @@ class IngestStore:
         )
         return record_dir
 
+    def write_composed_result(
+        self,
+        *,
+        record_dir: Path,
+        result: dict[str, Any],
+    ) -> Path:
+        record_dir.mkdir(parents=True, exist_ok=True)
+        output_path = record_dir / "result.json"
+        output_path.write_text(
+            json.dumps(result, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        return output_path
+
     def write_rejected(
         self,
         *,

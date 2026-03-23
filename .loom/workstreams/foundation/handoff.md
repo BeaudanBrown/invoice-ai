@@ -33,6 +33,7 @@ Completed:
 - extended the CLI so `run-tool --write-approval-artifacts` materializes approval requests on disk and `render-quote-preview` writes a preview PDF into the configured artifacts tree
 - implemented the first ingest normalization tool under `src/invoice_ai/ingest/` with source models, ERP-backed supplier/item resolution, proposal shaping, and filesystem-backed ingest record persistence
 - extended the shared tool CLI so `ingest.normalize_supplier_invoice` can emit either a draft-ready ERP purchase-invoice request or an approval/review result
+- implemented the first composed supplier-ingest flow so `ingest.create_purchase_invoice_draft` can normalize supplier input, create a draft `Purchase Invoice`, optionally attach the source file, and persist the composed ERP result alongside the ingest record
 - implemented the first quote orchestration tool layer under `src/invoice_ai/quotes/` with customer/item resolution, ERP-backed quote context gathering, draft quotation creation, and draft quotation revision
 - implemented the first filesystem-backed quotation revision store under `src/invoice_ai/revisions/` so working quote revisions persist outside ERPNext
 - extended the shared tool CLI so `quotes.prepare_context`, `quotes.create_draft`, and `quotes.revise_draft` can drive ERP-backed quotation workflows and refreshed preview artifacts
@@ -60,4 +61,4 @@ Use the foundation Beads epic to implement:
 
 Current Beads child tasks:
 
-- `coordinator-m8f`: compose supplier ingest into ERP draft and attachment flow
+- none currently recorded in this handoff; consult Beads for the next implementation slice after `coordinator-m8f`

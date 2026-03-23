@@ -84,14 +84,17 @@ Quote preview artifacts currently render to:
 The current ingest normalization layer lives under `src/invoice_ai/ingest/` and exposes:
 
 - `ingest.normalize_supplier_invoice`
+- `ingest.create_purchase_invoice_draft`
 
-That tool:
+Those tools:
 
 - accepts structured supplier invoice input
 - resolves supplier and item references against ERP data when available
 - emits a draft-ready `erp.create_draft_purchase_invoice` request when everything matches
 - falls back to an approval/review response when master data is missing or low confidence
 - persists ingest records under `${INVOICE_AI_INGEST_DIR:-$INVOICE_AI_STATE_DIR/ingest}`
+- can compose normalization, draft `Purchase Invoice` creation, and optional source-file attachment into one ERP-first flow
+- persists the composed tool result alongside the ingest record for later review
 
 ## Current Quote Tool Surface
 
