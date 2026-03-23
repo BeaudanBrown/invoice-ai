@@ -10,6 +10,7 @@ from ..approvals.store import ApprovalStore
 from ..config import RuntimeConfig
 from ..erp.schemas import ToolRequest
 from ..erp.tools import ERPToolExecutor
+from ..extract.tools import ExtractToolExecutor
 from ..ingest.tools import IngestToolExecutor
 from ..quotes.tools import QuoteToolExecutor
 
@@ -141,6 +142,8 @@ class InvoiceAIRequestHandler(BaseHTTPRequestHandler):
 
 
 def _tool_executor_for(tool_name: str, config: RuntimeConfig) -> object:
+    if tool_name.startswith("extract."):
+        return ExtractToolExecutor.from_runtime_config(config)
     if tool_name.startswith("erp."):
         return ERPToolExecutor.from_runtime_config(config)
     if tool_name.startswith("ingest."):

@@ -34,6 +34,7 @@ Completed:
 - implemented the first ingest normalization tool under `src/invoice_ai/ingest/` with source models, ERP-backed supplier/item resolution, proposal shaping, and filesystem-backed ingest record persistence
 - extended the shared tool CLI so `ingest.normalize_supplier_invoice` can emit either a draft-ready ERP purchase-invoice request or an approval/review result
 - implemented the first composed supplier-ingest flow so `ingest.create_purchase_invoice_draft` can normalize supplier input, create a draft `Purchase Invoice`, optionally attach the source file, and persist the composed ERP result alongside the ingest record
+- implemented the first raw-document extraction layer under `src/invoice_ai/extract/` so `extract.supplier_invoice_from_document` can accept raw text or a local document path, use `Docling` for PDF text extraction when configured, emit a structured supplier-invoice candidate plus a ready-to-run ingest request, and surface low-confidence extraction through approval review
 - implemented the first quote orchestration tool layer under `src/invoice_ai/quotes/` with customer/item resolution, ERP-backed quote context gathering, draft quotation creation, and draft quotation revision
 - implemented the first filesystem-backed quotation revision store under `src/invoice_ai/revisions/` so working quote revisions persist outside ERPNext
 - extended the shared tool CLI so `quotes.prepare_context`, `quotes.create_draft`, and `quotes.revise_draft` can drive ERP-backed quotation workflows and refreshed preview artifacts

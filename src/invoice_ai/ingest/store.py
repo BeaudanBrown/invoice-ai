@@ -29,6 +29,25 @@ class IngestStore:
         )
         return record_dir
 
+    def write_extracted(
+        self,
+        *,
+        request_id: str,
+        source: dict[str, Any],
+        extracted: dict[str, Any],
+    ) -> Path:
+        record_dir = self._record_dir("processed", request_id)
+        record_dir.mkdir(parents=True, exist_ok=True)
+        (record_dir / "source.json").write_text(
+            json.dumps(source, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        (record_dir / "extracted.json").write_text(
+            json.dumps(extracted, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        return record_dir
+
     def write_composed_result(
         self,
         *,

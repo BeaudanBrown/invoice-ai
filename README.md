@@ -79,6 +79,22 @@ Quote preview artifacts currently render to:
 
 - `${INVOICE_AI_ARTIFACTS_DIR:-$INVOICE_AI_STATE_DIR/artifacts}/quotes/<draft-key>/preview.pdf`
 
+## Current Extraction Tool Surface
+
+The current extraction layer lives under `src/invoice_ai/extract/` and exposes:
+
+- `extract.supplier_invoice_from_document`
+
+That tool:
+
+- accepts raw text or a local document path
+- reads plain-text files directly
+- reads PDF files through the configured `Docling` endpoint
+- extracts candidate supplier invoice fields and line items into the same shape used by the ingest layer
+- emits a `next_request` for `ingest.normalize_supplier_invoice`
+- persists `extracted.json` alongside the ingest record
+- surfaces low-confidence extraction as an approval/review result instead of silently continuing into ERP writes
+
 ## Current Ingest Tool Surface
 
 The current ingest normalization layer lives under `src/invoice_ai/ingest/` and exposes:

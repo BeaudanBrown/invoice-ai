@@ -10,6 +10,7 @@ from .artifacts.pdf import QuotePreviewRenderer
 from .config import RuntimeConfig
 from .erp.schemas import ToolRequest
 from .erp.tools import ERPToolExecutor
+from .extract.tools import ExtractToolExecutor
 from .ingest.tools import IngestToolExecutor
 from .quotes.tools import QuoteToolExecutor
 from .service.http import InvoiceAIHTTPServer
@@ -147,6 +148,8 @@ def _read_request_payload(path: str) -> dict[str, object]:
 
 
 def _tool_executor_for(tool_name: str, config: RuntimeConfig) -> object:
+    if tool_name.startswith("extract."):
+        return ExtractToolExecutor.from_runtime_config(config)
     if tool_name.startswith("erp."):
         return ERPToolExecutor.from_runtime_config(config)
     if tool_name.startswith("ingest."):
