@@ -8,6 +8,7 @@ from ..config import RuntimeConfig
 from ..erp.client import ERPNextClient
 from ..erp.schemas import ApprovalPayload, ToolRequest, ToolResponse, approval_artifact_paths
 from ..erp.tools import ERPToolExecutor
+from ..extract.tools import ExtractToolExecutor
 from .models import SupplierInvoiceInput
 from .normalize import SupplierInvoiceNormalizer
 from .store import IngestStore
@@ -20,10 +21,12 @@ class IngestToolExecutor:
         config: RuntimeConfig,
         erp_client: ERPNextClient | None = None,
         erp_executor: ERPToolExecutor | None = None,
+        extract_executor: ExtractToolExecutor | None = None,
     ) -> None:
         self.config = config
         self.erp_client = erp_client
         self.erp_executor = erp_executor
+        self.extract_executor = extract_executor
         self.normalizer = SupplierInvoiceNormalizer(erp_client)
         self.store = IngestStore(config.paths.ingest_dir)
 
@@ -34,12 +37,18 @@ class IngestToolExecutor:
         if config.dependencies.erpnext_url is not None:
             erp_client = ERPNextClient.from_runtime_config(config)
             erp_executor = ERPToolExecutor(config=config, client=erp_client)
-        return cls(config=config, erp_client=erp_client, erp_executor=erp_executor)
+        return cls(
+            config=config,
+            erp_client=erp_client,
+            erp_executor=erp_executor,
+            extract_executor=ExtractToolExecutor.from_runtime_config(config),
+        )
 
     def execute(self, request: ToolRequest) -> ToolResponse:
         handlers = {
             "ingest.normalize_supplier_invoice": self.normalize_supplier_invoice,
             "ingest.create_purchase_invoice_draft": self.create_purchase_invoice_draft,
+            "ingest.process_supplier_document": self.process_supplier_document,
         }
         handler = handlers.get(request.tool_name)
         if handler is None:
@@ -78,6 +87,83 @@ class IngestToolExecutor:
             request=request,
             normalized=normalized,
             record_dir=record_dir,
+        )
+
+    def process_supplier_document(self, request: ToolRequest) -> ToolResponse:
+        if self.extract_executor is None:
+            return ToolResponse(
+                request_id=request.request_id,
+                tool_name=request.tool_name,
+                status="blocked",
+                errors=[
+                    {
+                        "code": "ingest.extract_unavailable",
+                        "message": "Document extraction is not available for supplier document processing",
+                    }
+                ],
+            )
+
+        extract_request = ToolRequest(
+            request_id=request.request_id,
+            tool_name="extract.supplier_invoice_from_document",
+            dry_run=request.dry_run,
+            payload=dict(request.payload),
+            conversation_context=request.conversation_context,
+        )
+        extract_response = self.extract_executor.execute(extract_request)
+        if extract_response.status != "success":
+            return ToolResponse(
+                request_id=request.request_id,
+                tool_name=request.tool_name,
+                status=extract_response.status,
+                data={
+                    "stage": "extract",
+                    "extract_response": extract_response.as_dict(),
+                },
+                errors=extract_response.errors,
+                warnings=extract_response.warnings,
+                approval=extract_response.approval,
+                meta=extract_response.meta,
+            )
+
+        next_request = dict(extract_response.data["next_request"])
+        next_payload = dict(next_request.get("payload", {}))
+        next_payload["attach_source_file"] = bool(
+            request.payload.get("attach_source_file", True)
+        )
+        if "file_name" in request.payload:
+            next_payload["file_name"] = request.payload["file_name"]
+        if "is_private" in request.payload:
+            next_payload["is_private"] = request.payload["is_private"]
+
+        create_request = ToolRequest.from_dict(
+            {
+                **next_request,
+                "request_id": request.request_id,
+                "tool_name": "ingest.create_purchase_invoice_draft",
+                "dry_run": request.dry_run,
+                "conversation_context": request.conversation_context,
+                "payload": next_payload,
+            }
+        )
+        create_response = self.create_purchase_invoice_draft(create_request)
+        return ToolResponse(
+            request_id=request.request_id,
+            tool_name=request.tool_name,
+            status=create_response.status,
+            data={
+                "stage": "ingest",
+                "extract_response": extract_response.as_dict(),
+                "pipeline_response": create_response.as_dict(),
+            },
+            errors=create_response.errors,
+            warnings=[*extract_response.warnings, *create_response.warnings],
+            approval=create_response.approval,
+            meta={
+                **extract_response.meta,
+                **create_response.meta,
+                "pipeline_stages": ["extract", "ingest"],
+            },
         )
 
     def create_purchase_invoice_draft(self, request: ToolRequest) -> ToolResponse:

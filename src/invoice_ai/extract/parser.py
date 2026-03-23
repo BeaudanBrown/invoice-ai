@@ -126,7 +126,12 @@ def _match_amount(lines: list[str], keys: list[str]) -> float | None:
     amount_pattern = re.compile(r"(-?\d+(?:,\d{3})*(?:\.\d+)?)")
     for line in lines:
         lowered = line.lower()
-        if any(key in lowered for key in keys):
+        if any(
+            lowered.startswith(f"{key}:")
+            or lowered.startswith(f"{key} ")
+            or lowered == key
+            for key in keys
+        ):
             matches = amount_pattern.findall(line.replace("$", ""))
             if matches:
                 return float(matches[-1].replace(",", ""))
@@ -157,6 +162,7 @@ def _parse_lines(lines: list[str]) -> list[ExtractedInvoiceLine]:
                 qty=qty,
                 rate=rate,
                 amount=amount,
+                item_name=match.group("description").strip(),
             )
         )
     return extracted
