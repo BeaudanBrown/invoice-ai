@@ -133,6 +133,30 @@ That layer:
 
 At the moment the quote layer expects structured quote intent payloads rather than free-form natural language. The chat-facing agent layer will sit above these tools later.
 
+## Current Operator Orchestration Surface
+
+The current operator-facing orchestration layer lives under `src/invoice_ai/orchestrator/` and exposes:
+
+- `orchestrator.handle_request`
+
+That layer:
+
+- accepts one operator-facing request envelope
+- infers or accepts `request_kind`
+- routes supplier document intake requests into `ingest.process_supplier_document`
+- routes quote drafting requests into `quotes.create_draft`
+- returns a consistent response shape with:
+  - normalized `stage`
+  - delegated tool details
+  - artifact references
+  - ERP document references
+  - the delegated tool response for deeper inspection
+
+Supported request kinds today:
+
+- `supplier_document_intake`
+- `quote_draft`
+
 ## Current Service Surface
 
 The current service entrypoint is a small HTTP control plane started with:
