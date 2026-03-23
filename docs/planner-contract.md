@@ -32,7 +32,13 @@ The current planner can map:
 - quote-creation turns into `quote_draft`
 - quote follow-up turns with `active_quote` into `quote_revision`
 
-The current implementation is intentionally narrow and heuristic. It exists to establish the boundary and the data flow, not to solve general natural-language planning.
+The current implementation is intentionally narrow. It now supports:
+
+- heuristic planning
+- markdown memory-aware default enrichment from `/var/lib/invoice-ai/memory`
+- optional Ollama-assisted routing when `defaults.planner.use_model_assist` and `defaults.planner.model` are provided
+
+It still exists to establish the boundary and the data flow, not to solve general natural-language planning.
 
 ## Expected Input Shape
 
@@ -78,6 +84,54 @@ For supplier ingestion:
   ]
 }
 ```
+
+To enable optional model assistance:
+
+```json
+{
+  "message": "Could you sort out travel on the quote?",
+  "defaults": {
+    "planner": {
+      "use_model_assist": true,
+      "model": "llama3.1:8b"
+    },
+    "quote": {
+      "travel_item_code": "TRAVEL",
+      "travel_rate": 35.0
+    }
+  },
+  "conversation_context": {
+    "active_quote": {
+      "draft_key": "quote-123",
+      "quotation": "QTN-0004"
+    }
+  }
+}
+```
+
+## Memory Shape
+
+The planner reads markdown memory documents from the configured memory directory. The current selector logic always reads:
+
+- `global/*.md`
+- `operator/*.md`
+
+and then tries to match:
+
+- `clients/*.md`
+- `jobs/*.md`
+
+using defaults and obvious identifiers from the turn.
+
+Recommended frontmatter keys include:
+
+- `subject`
+- `canonical_customer`
+- `customer_name`
+- `quote_defaults`
+- `travel_item_code`
+- `travel_rate`
+- `labor_item_code`
 
 ## Next Evolution
 

@@ -28,6 +28,16 @@ The exact on-disk layout can evolve, but it should be:
 
 The first concrete storage layout now lives in `docs/storage-layout.md`.
 
+The first implementation now also supports lightweight markdown frontmatter for planner consumption. Useful keys include:
+
+- `subject`
+- `canonical_customer`
+- `customer_name`
+- `quote_defaults`
+- `labor_item_code`
+- `travel_item_code`
+- `travel_rate`
+
 ## Memory Types
 
 ### Operator Memory

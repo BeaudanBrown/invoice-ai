@@ -175,7 +175,9 @@ That layer:
 - accepts free-form operator turns plus structured defaults and conversation context
 - emits a structured operator request for the orchestrator
 - can directly execute that plan through `orchestrator.handle_request`
-- currently supports narrow heuristic handling for:
+- consults markdown memory from the configured memory directory
+- can optionally use the configured local Ollama endpoint when `defaults.planner.use_model_assist` is enabled
+- currently supports narrow planning for:
   - supplier document intake
   - quote drafting
   - quote revision
@@ -239,6 +241,7 @@ This repository is currently in foundation mode. The core architecture decisions
 - `docs/storage-layout.md`
 - `docs/orchestrator-contract.md`
 - `docs/planner-contract.md`
+- `docs/memory.md`
 - `docs/vertical-slice-1.md`
 - `docs/implementation-plan-1.md`
 - `docs/decisions/foundation-open-questions.md`
