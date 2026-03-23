@@ -13,6 +13,7 @@ from .erp.tools import ERPToolExecutor
 from .extract.tools import ExtractToolExecutor
 from .ingest.tools import IngestToolExecutor
 from .orchestrator.tools import OrchestratorToolExecutor
+from .planner.tools import PlannerToolExecutor
 from .quotes.tools import QuoteToolExecutor
 from .service.http import InvoiceAIHTTPServer
 
@@ -157,6 +158,8 @@ def _tool_executor_for(tool_name: str, config: RuntimeConfig) -> object:
         return IngestToolExecutor.from_runtime_config(config)
     if tool_name.startswith("orchestrator."):
         return OrchestratorToolExecutor.from_runtime_config(config)
+    if tool_name.startswith("planner."):
+        return PlannerToolExecutor.from_runtime_config(config)
     if tool_name.startswith("quotes."):
         return QuoteToolExecutor.from_runtime_config(config)
     raise ValueError(f"Unsupported tool family for {tool_name}")

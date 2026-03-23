@@ -38,6 +38,7 @@ Completed:
 - implemented the first end-to-end supplier-document pipeline so `ingest.process_supplier_document` can start from a raw supplier document, run extraction, continue through normalization and draft `Purchase Invoice` creation when safe, and stop cleanly for review at either the extraction or ERP master-data stage
 - implemented the first operator-facing orchestration facade under `src/invoice_ai/orchestrator/` so `orchestrator.handle_request` can accept a single request envelope, route supplier-document intake into `ingest.process_supplier_document`, route quote drafting into `quotes.create_draft`, and return a consistent stage/artifact/ERP-ref response shape
 - extended the orchestration facade so quote revisions can route through `quotes.revise_draft`, quote follow-up turns can reuse `conversation_context.active_quote`, and the repo now has an explicit orchestrator contract doc for the transition from structured operator envelopes to chat-planned requests
+- implemented the first planner layer under `src/invoice_ai/planner/` so free-form turns can be translated into structured orchestrator requests for supplier intake, quote drafting, and quote revision without bypassing the orchestrator or semantic tool layers
 - implemented the first quote orchestration tool layer under `src/invoice_ai/quotes/` with customer/item resolution, ERP-backed quote context gathering, draft quotation creation, and draft quotation revision
 - implemented the first filesystem-backed quotation revision store under `src/invoice_ai/revisions/` so working quote revisions persist outside ERPNext
 - extended the shared tool CLI so `quotes.prepare_context`, `quotes.create_draft`, and `quotes.revise_draft` can drive ERP-backed quotation workflows and refreshed preview artifacts
@@ -65,4 +66,4 @@ Use the foundation Beads epic to implement:
 
 Current Beads child tasks:
 
-- `coordinator-aub`: add the first planner layer that turns free-form chat into structured orchestrator requests while reusing `conversation_state`
+- `coordinator-ymk`: extend the planner with memory-aware and model-assisted routing while keeping the same safe structured request boundary

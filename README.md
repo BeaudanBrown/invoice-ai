@@ -163,6 +163,23 @@ so follow-up revisions can reuse draft identity through `conversation_context.ac
 The longer-term chat planner should terminate in this structured operator envelope rather than
 calling ERP or quote tools directly.
 
+## Current Planner Surface
+
+The current planner layer lives under `src/invoice_ai/planner/` and exposes:
+
+- `planner.plan_turn`
+- `planner.handle_turn`
+
+That layer:
+
+- accepts free-form operator turns plus structured defaults and conversation context
+- emits a structured operator request for the orchestrator
+- can directly execute that plan through `orchestrator.handle_request`
+- currently supports narrow heuristic handling for:
+  - supplier document intake
+  - quote drafting
+  - quote revision
+
 ## Current Service Surface
 
 The current service entrypoint is a small HTTP control plane started with:
@@ -221,6 +238,7 @@ This repository is currently in foundation mode. The core architecture decisions
 - `docs/nixos-module-contract.md`
 - `docs/storage-layout.md`
 - `docs/orchestrator-contract.md`
+- `docs/planner-contract.md`
 - `docs/vertical-slice-1.md`
 - `docs/implementation-plan-1.md`
 - `docs/decisions/foundation-open-questions.md`
