@@ -6,6 +6,7 @@ from ..config import RuntimeConfig
 from ..erp.schemas import ToolRequest, ToolResponse
 from ..ingest.tools import IngestToolExecutor
 from ..quotes.tools import QuoteToolExecutor
+from .contract import conversation_state_for, next_request_contract
 from .models import OperatorRequest
 
 
@@ -40,7 +41,11 @@ class OrchestratorToolExecutor:
 
     def handle_request(self, request: ToolRequest) -> ToolResponse:
         try:
-            operator_request = OperatorRequest.from_payload(request.request_id, request.payload)
+            operator_request = OperatorRequest.from_payload(
+                request.request_id,
+                request.payload,
+                conversation_context=request.conversation_context,
+            )
         except ValueError as exc:
             return ToolResponse(
                 request_id=request.request_id,
@@ -69,6 +74,10 @@ class OrchestratorToolExecutor:
             request_kind=operator_request.request_kind,
             response=delegated_response,
         )
+        conversation_state = conversation_state_for(
+            request_kind=operator_request.request_kind,
+            response=delegated_response,
+        )
 
         return ToolResponse(
             request_id=request.request_id,
@@ -84,6 +93,11 @@ class OrchestratorToolExecutor:
                 },
                 "artifacts": artifacts,
                 "erp_refs": erp_refs,
+                "conversation_state": conversation_state,
+                "next_request_contract": next_request_contract(
+                    request_kind=operator_request.request_kind,
+                    response=delegated_response,
+                ),
                 "delegated_response": delegated_response.as_dict(),
             },
             errors=delegated_response.errors,
@@ -115,6 +129,11 @@ def _stage_for(request_kind: str, response: ToolResponse) -> str:
         if delegated_stage == "ingest":
             return "ingest_review"
         return delegated_stage or "supplier_document_intake"
+
+    if request_kind == "quote_revision":
+        if response.status == "success":
+            return "quotation_draft_revised"
+        return "quote_revision"
 
     if response.status == "success":
         return "quotation_draft_created"
@@ -204,7 +223,7 @@ def _collect_erp_refs(*, request_kind: str, response: ToolResponse) -> list[dict
     refs = _collect_doc_refs(response.as_dict())
     data = response.data
 
-    if request_kind == "quote_draft" and "quotation" in data:
+    if request_kind in {"quote_draft", "quote_revision"} and "quotation" in data:
         refs.append(
             {
                 "doctype": "Quotation",

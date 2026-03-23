@@ -18,19 +18,35 @@ def _looks_like_quote_request(payload: dict[str, Any]) -> bool:
     )
 
 
+def _looks_like_quote_revision(payload: dict[str, Any]) -> bool:
+    return any(
+        key in payload
+        for key in ("quote_revision", "patch", "quotation", "active_quote")
+    )
+
+
 @dataclass(frozen=True)
 class OperatorRequest:
     request_id: str
     request_kind: str
     operator_message: str | None
     payload: dict[str, Any]
+    conversation_context: dict[str, Any]
 
     @classmethod
-    def from_payload(cls, request_id: str, payload: dict[str, Any]) -> "OperatorRequest":
+    def from_payload(
+        cls,
+        request_id: str,
+        payload: dict[str, Any],
+        *,
+        conversation_context: dict[str, Any] | None = None,
+    ) -> "OperatorRequest":
         request_kind = str(payload.get("request_kind") or payload.get("kind") or "").strip()
         if not request_kind:
             if _looks_like_supplier_document(payload):
                 request_kind = "supplier_document_intake"
+            elif _looks_like_quote_revision(payload):
+                request_kind = "quote_revision"
             elif _looks_like_quote_request(payload):
                 request_kind = "quote_draft"
             else:
@@ -39,7 +55,11 @@ class OperatorRequest:
                 )
 
         normalized_kind = request_kind.replace("-", "_")
-        if normalized_kind not in {"supplier_document_intake", "quote_draft"}:
+        if normalized_kind not in {
+            "supplier_document_intake",
+            "quote_draft",
+            "quote_revision",
+        }:
             raise ValueError(f"Unsupported orchestrator request kind: {request_kind}")
 
         return cls(
@@ -48,11 +68,14 @@ class OperatorRequest:
             operator_message=_optional_string(payload.get("operator_message"))
             or _optional_string(payload.get("message")),
             payload=dict(payload),
+            conversation_context=dict(conversation_context or {}),
         )
 
     def delegated_tool_name(self) -> str:
         if self.request_kind == "supplier_document_intake":
             return "ingest.process_supplier_document"
+        if self.request_kind == "quote_revision":
+            return "quotes.revise_draft"
         return "quotes.create_draft"
 
     def delegated_payload(self) -> dict[str, Any]:
@@ -67,6 +90,28 @@ class OperatorRequest:
             payload.pop("message", None)
             return payload
 
+        if self.request_kind == "quote_revision":
+            nested = self.payload.get("quote_revision")
+            if isinstance(nested, dict):
+                payload = dict(nested)
+            else:
+                payload = dict(self.payload)
+                payload.pop("request_kind", None)
+                payload.pop("kind", None)
+                payload.pop("operator_message", None)
+                payload.pop("message", None)
+
+            active_quote = self.active_quote_context()
+            if "draft_key" not in payload and active_quote.get("draft_key") is not None:
+                payload["draft_key"] = active_quote["draft_key"]
+            if "quotation" not in payload and active_quote.get("quotation") is not None:
+                payload["quotation"] = active_quote["quotation"]
+            if "draft_key" not in payload:
+                raise ValueError(
+                    "quote_revision requires draft_key or conversation_context.active_quote.draft_key"
+                )
+            return payload
+
         nested = self.payload.get("quote")
         if isinstance(nested, dict):
             payload = dict(nested)
@@ -79,6 +124,15 @@ class OperatorRequest:
         if "draft_key" not in payload:
             payload["draft_key"] = self.request_id
         return payload
+
+    def active_quote_context(self) -> dict[str, Any]:
+        active_quote = self.payload.get("active_quote")
+        if isinstance(active_quote, dict):
+            return dict(active_quote)
+        from_context = self.conversation_context.get("active_quote")
+        if isinstance(from_context, dict):
+            return dict(from_context)
+        return {}
 
 
 def _optional_string(value: Any) -> str | None:

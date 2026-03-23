@@ -156,6 +156,12 @@ Supported request kinds today:
 
 - `supplier_document_intake`
 - `quote_draft`
+- `quote_revision`
+
+For quote-related requests, the orchestrator also returns `conversation_state.active_quote`
+so follow-up revisions can reuse draft identity through `conversation_context.active_quote`.
+The longer-term chat planner should terminate in this structured operator envelope rather than
+calling ERP or quote tools directly.
 
 ## Current Service Surface
 
@@ -214,6 +220,7 @@ This repository is currently in foundation mode. The core architecture decisions
 - `docs/memory.md`
 - `docs/nixos-module-contract.md`
 - `docs/storage-layout.md`
+- `docs/orchestrator-contract.md`
 - `docs/vertical-slice-1.md`
 - `docs/implementation-plan-1.md`
 - `docs/decisions/foundation-open-questions.md`
