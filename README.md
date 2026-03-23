@@ -22,6 +22,7 @@ nix run . -- show-config
 nix run . -- init-paths
 nix run . -- run-tool --request-file request.json
 nix run . -- render-quote-preview --input-file quote.json
+nix run . -- serve-http
 ```
 
 Environment contract:
@@ -110,6 +111,22 @@ That layer:
 - persists working revision snapshots under `${INVOICE_AI_REVISIONS_DIR:-$INVOICE_AI_STATE_DIR/revisions}/quotations/<draft-key>/`
 
 At the moment the quote layer expects structured quote intent payloads rather than free-form natural language. The chat-facing agent layer will sit above these tools later.
+
+## Current Service Surface
+
+The current service entrypoint is a small HTTP control plane started with:
+
+```bash
+nix run . -- serve-http
+```
+
+The first endpoints are:
+
+- `GET /healthz`
+- `GET /api/runtime`
+- `POST /api/tools/run`
+
+`POST /api/tools/run` accepts the same JSON envelope used by `run-tool`. It may also include `write_approval_artifacts: true` at the top level to persist approval artifacts while executing the request.
 
 `invoice-ai` is a self-hosted, open-source, Nix-native invoicing workspace for AI-assisted accounts receivable and accounts payable flows.
 

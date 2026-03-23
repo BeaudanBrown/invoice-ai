@@ -1,6 +1,36 @@
 { lib, pkgs, config, ... }:
 let
   cfg = config.services.invoice-ai;
+  defaultPackage = pkgs.writeShellApplication {
+    name = "invoice-ai";
+    runtimeInputs = [ pkgs.python3 ];
+    text = ''
+      export PYTHONPATH="${../src}:''${PYTHONPATH:-}"
+      exec python3 ${../bin/invoice-ai} "$@"
+    '';
+  };
+  runtimeEnvironment = lib.filterAttrs (_: value: value != null) {
+    INVOICE_AI_LISTEN_ADDRESS = cfg.listenAddress;
+    INVOICE_AI_PORT = toString cfg.port;
+    INVOICE_AI_PUBLIC_URL = cfg.publicUrl;
+    INVOICE_AI_HOST_NAME = cfg.hostName;
+    INVOICE_AI_STATE_DIR = cfg.stateDir;
+    INVOICE_AI_DOCUMENTS_DIR = cfg.documentsDir;
+    INVOICE_AI_MEMORY_DIR = cfg.memoryDir;
+    INVOICE_AI_INGEST_DIR = cfg.ingestDir;
+    INVOICE_AI_APPROVALS_DIR = cfg.approvalsDir;
+    INVOICE_AI_REVISIONS_DIR = cfg.revisionsDir;
+    INVOICE_AI_ARTIFACTS_DIR = cfg.artifactsDir;
+    INVOICE_AI_CACHE_DIR = cfg.cacheDir;
+    INVOICE_AI_ERPNEXT_URL = cfg.erpnext.url;
+    INVOICE_AI_ERPNEXT_CREDENTIALS_FILE =
+      if cfg.erpnext.credentialsFile != null
+      then toString cfg.erpnext.credentialsFile
+      else null;
+    INVOICE_AI_OLLAMA_URL = cfg.ollama.url;
+    INVOICE_AI_DOCLING_URL = cfg.docling.url;
+    INVOICE_AI_N8N_URL = cfg.n8n.url;
+  };
 in
 {
   options.services.invoice-ai = {
@@ -8,12 +38,8 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = pkgs.writeTextFile {
-        name = "invoice-ai-foundation";
-        destination = "/share/doc/invoice-ai/README";
-        text = "invoice-ai foundation package placeholder\n";
-      };
-      description = "Placeholder package for the future invoice-ai application bundle.";
+      default = defaultPackage;
+      description = "invoice-ai application package used by the service.";
     };
 
     user = lib.mkOption {
@@ -146,10 +172,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    warnings = [
-      "services.invoice-ai currently defines the service boundary, runtime options, and persistence contract; the application systemd service is not wired yet."
-    ];
-
     users.groups.${cfg.group} = {};
 
     users.users.${cfg.user} = {
@@ -169,5 +191,25 @@ in
       "d ${cfg.artifactsDir} 0750 ${cfg.user} ${cfg.group} - -"
       "d ${cfg.cacheDir} 0750 ${cfg.user} ${cfg.group} - -"
     ];
+
+    systemd.services.invoice-ai = {
+      description = "invoice-ai control-plane service";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      environment = runtimeEnvironment;
+      serviceConfig = {
+        Type = "simple";
+        User = cfg.user;
+        Group = cfg.group;
+        WorkingDirectory = cfg.stateDir;
+        ExecStartPre = "${cfg.package}/bin/invoice-ai init-paths";
+        ExecStart = "${cfg.package}/bin/invoice-ai serve-http";
+        Restart = "on-failure";
+        RestartSec = 5;
+      };
+      serviceConfig.EnvironmentFile =
+        lib.optional (cfg.environmentFile != null) cfg.environmentFile;
+    };
   };
 }

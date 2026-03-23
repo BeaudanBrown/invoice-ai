@@ -38,6 +38,7 @@ Stand up the `invoice-ai` project as a tracked, Nix-native repository and solidi
 - `coordinator-326.16`: implement ingest normalization and proposal pipeline
 - `coordinator-326.15`: implement quote drafting and revision orchestration
 - `coordinator-326.17`: wire the first service entrypoint and NixOS unit
+- `coordinator-m8f`: compose supplier ingest into ERP draft and attachment flow
 - `coordinator-326.13`: implement ERP connector skeleton for semantic tools
 - `coordinator-326.14`: implement approval artifact store and quote preview stub
 
@@ -55,10 +56,13 @@ Stand up the `invoice-ai` project as a tracked, Nix-native repository and solidi
 - `src/invoice_ai/ingest/normalize.py` resolves supplier/item matches and shapes draft purchase-invoice requests
 - `src/invoice_ai/quotes/tools.py` dispatches quote context gathering, draft quotation creation, and draft quotation revision above the raw ERP tools
 - `src/invoice_ai/revisions/store.py` persists working quotation revision snapshots under the configured revisions tree
+- `src/invoice_ai/service/http.py` provides the first HTTP control-plane service with health, runtime, and tool-execution endpoints
 - `src/invoice_ai/cli.py` now also exposes `run-tool` for JSON tool execution
-- `src/invoice_ai/cli.py` also exposes `render-quote-preview` for artifact generation
+- `src/invoice_ai/cli.py` also exposes `render-quote-preview` for artifact generation and `serve-http` for the service entrypoint
+- `modules/invoice-ai.nix` now provisions a real `systemd.services.invoice-ai` unit around the packaged `serve-http` entrypoint
 - `nix run . -- show-config` and `nix run . -- init-paths` are the current smoke tests
 - `nix run . -- run-tool --request-file ...` is the current semantic ERP connector test seam
 - `nix run . -- run-tool --write-approval-artifacts` and `nix run . -- render-quote-preview` are the current artifact-path test seams
 - `nix run . -- run-tool` also now exercises the ingest normalization path for supplier invoices
 - `nix run . -- run-tool` also now exercises quote context gathering, draft creation, and draft revision against the semantic ERP layer
+- `nix run . -- serve-http` plus `curl` now exercises the first HTTP service surface and tool execution over HTTP

@@ -109,9 +109,25 @@ The first implementation should not require `n8n` just to make the core chat-to-
 
 ## Runtime Shape
 
-The first application service should eventually expose:
+The first application service now exposes:
 
-- one HTTP API / chat backend on the configured address and port
+- one HTTP control-plane API on the configured address and port
+
+Current endpoints:
+
+- `GET /healthz`
+- `GET /api/runtime`
+- `POST /api/tools/run`
+
+The service process is started with:
+
+- `${package}/bin/invoice-ai serve-http`
+
+The module also runs:
+
+- `${package}/bin/invoice-ai init-paths`
+
+as `ExecStartPre` so the runtime directory contract is exercised through the module boundary before the service starts.
 
 The module should be ready for future expansion into:
 
@@ -119,6 +135,16 @@ The module should be ready for future expansion into:
 - scheduled maintenance or cleanup jobs
 
 But those do not need to be separate systemd units yet.
+
+## Current Systemd Contract
+
+When `services.invoice-ai.enable = true;` the module now provisions:
+
+- a dedicated `invoice-ai` system user and group by default
+- tmpfiles rules for the persistent runtime directories
+- a `systemd.services.invoice-ai` unit
+- the runtime environment variables consumed by `RuntimeConfig.from_env()`
+- optional host-provided secret loading through `services.invoice-ai.environmentFile`
 
 ## Secret Wiring
 

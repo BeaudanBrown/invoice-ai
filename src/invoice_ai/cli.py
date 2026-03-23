@@ -12,6 +12,7 @@ from .erp.schemas import ToolRequest
 from .erp.tools import ERPToolExecutor
 from .ingest.tools import IngestToolExecutor
 from .quotes.tools import QuoteToolExecutor
+from .service.http import InvoiceAIHTTPServer
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -60,6 +61,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     render_quote.set_defaults(handler=handle_render_quote_preview)
 
+    serve_http = subparsers.add_parser(
+        "serve-http",
+        help="Run the invoice-ai HTTP control-plane service.",
+    )
+    serve_http.set_defaults(handler=handle_serve_http)
+
     return parser
 
 
@@ -105,6 +112,30 @@ def handle_render_quote_preview(args: argparse.Namespace) -> int:
             sort_keys=True,
         )
     )
+    return 0
+
+
+def handle_serve_http(_args: argparse.Namespace) -> int:
+    config = RuntimeConfig.from_env()
+    config.paths.ensure()
+    server = InvoiceAIHTTPServer(config)
+    print(
+        json.dumps(
+            {
+                "listen_address": config.service.listen_address,
+                "port": config.service.port,
+                "base_url": config.service.base_url(),
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
     return 0
 
 

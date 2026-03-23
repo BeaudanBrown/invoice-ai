@@ -37,6 +37,10 @@ Completed:
 - implemented the first filesystem-backed quotation revision store under `src/invoice_ai/revisions/` so working quote revisions persist outside ERPNext
 - extended the shared tool CLI so `quotes.prepare_context`, `quotes.create_draft`, and `quotes.revise_draft` can drive ERP-backed quotation workflows and refreshed preview artifacts
 - verified quote create, revise, and approval-required paths against a disposable local mock ERP API
+- implemented the first HTTP control-plane service under `src/invoice_ai/service/` with `GET /healthz`, `GET /api/runtime`, and `POST /api/tools/run`
+- extended the CLI with `serve-http` so the packaged app can run as a long-lived service instead of only ad hoc commands
+- wired `modules/invoice-ai.nix` to provision a real `systemd.services.invoice-ai` unit with `ExecStartPre` path initialization and `ExecStart` for the HTTP service
+- verified the service locally through `nix run . -- serve-http`, `curl` health/runtime probes, HTTP tool execution, `nix flake check`, and a NixOS module evaluation that confirmed the generated `ExecStart` and `ExecStartPre`
 
 Not completed:
 
@@ -50,10 +54,10 @@ Not completed:
 Use the foundation Beads epic to implement:
 
 1. the first composed ingest-to-ERP loop that chains ingest and ERP tools end to end
-2. the first runnable ERP-backed CLI loop or service entrypoint above the tool layer
-3. the first runnable service wiring into `nix-dotfiles`
-4. tighter ERPNext field mappings and broader semantic tool coverage where the first vertical slice needs them
+2. the first runnable service wiring into `nix-dotfiles`
+3. tighter ERPNext field mappings and broader semantic tool coverage where the first vertical slice needs them
+4. any cleanup or retention behavior needed around revisions, approvals, and generated artifacts
 
 Current Beads child tasks:
 
-- `coordinator-326.17`: first service entrypoint and NixOS unit wiring
+- `coordinator-m8f`: compose supplier ingest into ERP draft and attachment flow
