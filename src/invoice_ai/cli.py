@@ -10,6 +10,7 @@ from .artifacts.pdf import QuotePreviewRenderer
 from .config import RuntimeConfig
 from .erp.schemas import ToolRequest
 from .erp.tools import ERPToolExecutor
+from .ingest.tools import IngestToolExecutor
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -78,7 +79,7 @@ def handle_run_tool(args: argparse.Namespace) -> int:
     payload = _read_request_payload(args.request_file)
     request = ToolRequest.from_dict(payload)
     config = RuntimeConfig.from_env()
-    executor = ERPToolExecutor.from_runtime_config(config)
+    executor = _tool_executor_for(request.tool_name, config)
     response = executor.execute(request)
     if args.write_approval_artifacts and response.approval is not None:
         ApprovalStore(config.paths.approvals_dir).write(response)
@@ -111,6 +112,14 @@ def _read_request_payload(path: str) -> dict[str, object]:
         return json.load(sys.stdin)
     with open(path, "r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def _tool_executor_for(tool_name: str, config: RuntimeConfig) -> object:
+    if tool_name.startswith("erp."):
+        return ERPToolExecutor.from_runtime_config(config)
+    if tool_name.startswith("ingest."):
+        return IngestToolExecutor.from_runtime_config(config)
+    raise ValueError(f"Unsupported tool family for {tool_name}")
 
 
 def main(argv: list[str] | None = None) -> int:

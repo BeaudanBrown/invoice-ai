@@ -31,12 +31,14 @@ Completed:
 - implemented the first filesystem-backed approval artifact writer under `src/invoice_ai/approvals/`
 - implemented the first deterministic quote-preview PDF renderer under `src/invoice_ai/artifacts/`
 - extended the CLI so `run-tool --write-approval-artifacts` materializes approval requests on disk and `render-quote-preview` writes a preview PDF into the configured artifacts tree
+- implemented the first ingest normalization tool under `src/invoice_ai/ingest/` with source models, ERP-backed supplier/item resolution, proposal shaping, and filesystem-backed ingest record persistence
+- extended the shared tool CLI so `ingest.normalize_supplier_invoice` can emit either a draft-ready ERP purchase-invoice request or an approval/review result
 
 Not completed:
 
 - no deployment has been wired into `nix-dotfiles` yet
 - no exact retention policy has been implemented in code yet
-- no real application code exists yet for intake normalization or quote/invoice revision orchestration
+- no real application code exists yet for quote/invoice revision orchestration
 - the ERP connector still needs broader semantic tool coverage and tighter ERPNext field mappings
 - the current quote preview renderer is a deterministic stub, not a production template
 
@@ -44,13 +46,12 @@ Not completed:
 
 Use the foundation Beads epic to implement:
 
-1. ingest normalization and proposal generation
-2. richer ERP draft/revision flows on top of the semantic connector
+1. richer ERP draft/revision flows on top of the semantic connector
+2. the first composed ingest-to-ERP loop that chains ingest and ERP tools end to end
 3. the first runnable ERP-backed CLI loop
 4. the first runnable service wiring into `nix-dotfiles`
 
 Current Beads child tasks:
 
-- `coordinator-326.16`: ingest normalization and proposal pipeline
 - `coordinator-326.15`: quote drafting and revision orchestration
 - `coordinator-326.17`: first service entrypoint and NixOS unit wiring

@@ -51,8 +51,11 @@ Stand up the `invoice-ai` project as a tracked, Nix-native repository and solidi
 - `src/invoice_ai/erp/tools.py` dispatches the first semantic ERP tool set
 - `src/invoice_ai/approvals/store.py` writes approval artifacts under the configured approvals directory
 - `src/invoice_ai/artifacts/pdf.py` writes deterministic quote-preview PDFs under the configured artifacts directory
+- `src/invoice_ai/ingest/tools.py` dispatches the first ingest normalization tool and writes ingest records
+- `src/invoice_ai/ingest/normalize.py` resolves supplier/item matches and shapes draft purchase-invoice requests
 - `src/invoice_ai/cli.py` now also exposes `run-tool` for JSON tool execution
 - `src/invoice_ai/cli.py` also exposes `render-quote-preview` for artifact generation
 - `nix run . -- show-config` and `nix run . -- init-paths` are the current smoke tests
 - `nix run . -- run-tool --request-file ...` is the current semantic ERP connector test seam
 - `nix run . -- run-tool --write-approval-artifacts` and `nix run . -- render-quote-preview` are the current artifact-path test seams
+- `nix run . -- run-tool` also now exercises the ingest normalization path for supplier invoices

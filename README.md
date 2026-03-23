@@ -78,6 +78,20 @@ Quote preview artifacts currently render to:
 
 - `${INVOICE_AI_ARTIFACTS_DIR:-$INVOICE_AI_STATE_DIR/artifacts}/quotes/<draft-key>/preview.pdf`
 
+## Current Ingest Tool Surface
+
+The current ingest normalization layer lives under `src/invoice_ai/ingest/` and exposes:
+
+- `ingest.normalize_supplier_invoice`
+
+That tool:
+
+- accepts structured supplier invoice input
+- resolves supplier and item references against ERP data when available
+- emits a draft-ready `erp.create_draft_purchase_invoice` request when everything matches
+- falls back to an approval/review response when master data is missing or low confidence
+- persists ingest records under `${INVOICE_AI_INGEST_DIR:-$INVOICE_AI_STATE_DIR/ingest}`
+
 `invoice-ai` is a self-hosted, open-source, Nix-native invoicing workspace for AI-assisted accounts receivable and accounts payable flows.
 
 The target system should be able to:
