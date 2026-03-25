@@ -73,4 +73,4 @@ Use the foundation Beads epic to implement:
 
 Current Beads child tasks:
 
-- `coordinator-rdr`: route review queue inspection through the operator surface so the main chat-facing interface can answer pending memory-review questions directly
+- `coordinator-vff`: inspect and act on memory reviews through the operator surface so the main chat-facing interface can move from listing reviews to inspecting specific ones
