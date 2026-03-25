@@ -72,4 +72,4 @@ Use the foundation Beads epic to implement:
 
 Current Beads child tasks:
 
-- `coordinator-t4s`: add a review index for planner memory artifacts so operator-facing clients can inspect pending chat-driven memory reviews without scanning the filesystem directly
+- `coordinator-rdr`: route review queue inspection through the operator surface so the main chat-facing interface can answer pending memory-review questions directly
