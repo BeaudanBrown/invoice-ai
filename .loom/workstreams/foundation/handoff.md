@@ -69,4 +69,4 @@ Use the foundation Beads epic to implement:
 
 Current Beads child tasks:
 
-- `coordinator-961`: add memory suggestions and review workflow so future memory updates can be proposed before they are accepted into durable markdown memory
+- `coordinator-xc9`: surface memory suggestions from planner and review flows so future conversational and review work can propose memory updates without bypassing explicit acceptance
