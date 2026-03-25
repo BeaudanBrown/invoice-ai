@@ -40,6 +40,7 @@ Completed:
 - extended the orchestration facade so quote revisions can route through `quotes.revise_draft`, quote follow-up turns can reuse `conversation_context.active_quote`, and the repo now has an explicit orchestrator contract doc for the transition from structured operator envelopes to chat-planned requests
 - implemented the first planner layer under `src/invoice_ai/planner/` so free-form turns can be translated into structured orchestrator requests for supplier intake, quote drafting, and quote revision without bypassing the orchestrator or semantic tool layers
 - extended the planner with markdown memory-aware default enrichment from the persistent memory directory and optional Ollama-assisted routing while keeping the same safe orchestrator request boundary
+- implemented the first explicit memory tool surface under `src/invoice_ai/memory/` so memory documents can be listed, read, created, updated, and appended to without bypassing the markdown store the planner already uses
 - implemented the first quote orchestration tool layer under `src/invoice_ai/quotes/` with customer/item resolution, ERP-backed quote context gathering, draft quotation creation, and draft quotation revision
 - implemented the first filesystem-backed quotation revision store under `src/invoice_ai/revisions/` so working quote revisions persist outside ERPNext
 - extended the shared tool CLI so `quotes.prepare_context`, `quotes.create_draft`, and `quotes.revise_draft` can drive ERP-backed quotation workflows and refreshed preview artifacts
@@ -67,4 +68,4 @@ Use the foundation Beads epic to implement:
 
 Current Beads child tasks:
 
-- `coordinator-3ec`: add memory curation and write/update tools so planner memory can be managed explicitly rather than only read
+- `coordinator-961`: add memory suggestions and review workflow so future memory updates can be proposed before they are accepted into durable markdown memory

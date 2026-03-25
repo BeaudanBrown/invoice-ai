@@ -12,6 +12,7 @@ from ..erp.schemas import ToolRequest
 from ..erp.tools import ERPToolExecutor
 from ..extract.tools import ExtractToolExecutor
 from ..ingest.tools import IngestToolExecutor
+from ..memory.tools import MemoryToolExecutor
 from ..orchestrator.tools import OrchestratorToolExecutor
 from ..planner.tools import PlannerToolExecutor
 from ..quotes.tools import QuoteToolExecutor
@@ -150,6 +151,8 @@ def _tool_executor_for(tool_name: str, config: RuntimeConfig) -> object:
         return ERPToolExecutor.from_runtime_config(config)
     if tool_name.startswith("ingest."):
         return IngestToolExecutor.from_runtime_config(config)
+    if tool_name.startswith("memory."):
+        return MemoryToolExecutor.from_runtime_config(config)
     if tool_name.startswith("orchestrator."):
         return OrchestratorToolExecutor.from_runtime_config(config)
     if tool_name.startswith("planner."):

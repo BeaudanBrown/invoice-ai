@@ -70,3 +70,14 @@ Examples:
 - prefer concise, high-signal notes over verbose transcripts
 - treat memory as operator-guidance context, not accounting truth
 - memory updates are non-destructive and can be agent-managed
+
+## Tool Surface
+
+The first explicit memory tools now live under `src/invoice_ai/memory/`:
+
+- `memory.list_documents`
+- `memory.get_document`
+- `memory.upsert_document`
+- `memory.record_note`
+
+These tools are intended to keep memory management explicit and auditable while reusing the same markdown store the planner reads.

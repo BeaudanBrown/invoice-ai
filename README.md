@@ -182,6 +182,21 @@ That layer:
   - quote drafting
   - quote revision
 
+## Current Memory Surface
+
+The current memory layer lives under `src/invoice_ai/memory/` and exposes:
+
+- `memory.list_documents`
+- `memory.get_document`
+- `memory.upsert_document`
+- `memory.record_note`
+
+That layer:
+
+- stores operator/client/job/global guidance as markdown under the configured memory directory
+- supports explicit create/update/read flows for memory documents
+- is the same store the planner consults for memory-aware routing
+
 ## Current Service Surface
 
 The current service entrypoint is a small HTTP control plane started with:

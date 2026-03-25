@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 import json
 from pathlib import Path
 import re
@@ -45,6 +46,81 @@ class MemoryStore:
             "documents": [document.as_context() for document in documents],
             "merged_defaults": self._merge_defaults(defaults=defaults, documents=documents),
         }
+
+    def list_documents(self, *, scope: str | None = None) -> list[MemoryDocument]:
+        scopes = [scope] if scope is not None else ["global", "operator", "clients", "jobs"]
+        documents: list[MemoryDocument] = []
+        for scope_name in scopes:
+            documents.extend(self._documents_in_scope(scope_name))
+        return documents
+
+    def get_document(self, *, scope: str, slug: str) -> MemoryDocument | None:
+        path = self._document_path(scope=scope, slug=slug)
+        if not path.exists():
+            return None
+        return self._load_document(scope=scope, path=path)
+
+    def upsert_document(
+        self,
+        *,
+        scope: str,
+        slug: str | None = None,
+        subject: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        body: str | None = None,
+    ) -> MemoryDocument:
+        scope = _validated_scope(scope)
+        target_slug = slug or _slugify(subject)
+        if not target_slug:
+            raise ValueError("Memory document requires slug or subject")
+
+        path = self._document_path(scope=scope, slug=target_slug)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        existing = self.get_document(scope=scope, slug=target_slug)
+        existing_metadata = {} if existing is None else dict(existing.metadata)
+        merged_metadata = _deep_merge_dict(existing_metadata, metadata or {})
+        merged_metadata.setdefault("subject", subject or merged_metadata.get("subject") or target_slug)
+        merged_metadata["updated_at"] = datetime.utcnow().isoformat() + "Z"
+
+        if body is None:
+            rendered_body = "" if existing is None else existing.body
+        else:
+            rendered_body = body.strip()
+
+        path.write_text(
+            _render_document(metadata=merged_metadata, body=rendered_body),
+            encoding="utf-8",
+        )
+        return self._load_document(scope=scope, path=path)
+
+    def record_note(
+        self,
+        *,
+        scope: str,
+        slug: str | None = None,
+        subject: str | None = None,
+        note: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> MemoryDocument:
+        scope = _validated_scope(scope)
+        target_slug = slug or _slugify(subject)
+        if not target_slug:
+            raise ValueError("Memory note requires slug or subject")
+        if not note.strip():
+            raise ValueError("Memory note cannot be empty")
+
+        existing = self.get_document(scope=scope, slug=target_slug)
+        timestamp = datetime.utcnow().isoformat() + "Z"
+        note_block = f"## Note {timestamp}\n\n{note.strip()}"
+        body = note_block if existing is None or not existing.body else f"{existing.body}\n\n{note_block}"
+        return self.upsert_document(
+            scope=scope,
+            slug=target_slug,
+            subject=subject,
+            metadata=metadata,
+            body=body,
+        )
 
     def _selected_documents(
         self,
@@ -140,6 +216,9 @@ class MemoryStore:
             metadata=metadata,
             body=body.strip(),
         )
+
+    def _document_path(self, *, scope: str, slug: str) -> Path:
+        return self.root / scope / f"{_slugify(slug)}.md"
 
     def _merge_defaults(
         self,
@@ -252,3 +331,26 @@ def _deep_merge_dict(base: dict[str, Any], update: dict[str, Any]) -> dict[str, 
         else:
             merged[key] = value
     return merged
+
+
+def _render_document(*, metadata: dict[str, Any], body: str) -> str:
+    lines = ["---"]
+    for key in sorted(metadata):
+        lines.append(f"{key}: {_render_frontmatter_value(metadata[key])}")
+    lines.extend(["---", "", body.strip(), ""])
+    return "\n".join(lines)
+
+
+def _render_frontmatter_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, sort_keys=True)
+    return str(value)
+
+
+def _validated_scope(scope: str) -> str:
+    normalized = scope.strip().lower()
+    if normalized not in {"global", "operator", "clients", "jobs"}:
+        raise ValueError(f"Unsupported memory scope: {scope}")
+    return normalized
