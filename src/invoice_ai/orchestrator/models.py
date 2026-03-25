@@ -25,6 +25,13 @@ def _looks_like_quote_revision(payload: dict[str, Any]) -> bool:
     )
 
 
+def _looks_like_review_queue_request(payload: dict[str, Any]) -> bool:
+    return any(
+        key in payload
+        for key in ("review_queue", "review_status", "review_scope")
+    )
+
+
 @dataclass(frozen=True)
 class OperatorRequest:
     request_id: str
@@ -45,6 +52,8 @@ class OperatorRequest:
         if not request_kind:
             if _looks_like_supplier_document(payload):
                 request_kind = "supplier_document_intake"
+            elif _looks_like_review_queue_request(payload):
+                request_kind = "review_queue"
             elif _looks_like_quote_revision(payload):
                 request_kind = "quote_revision"
             elif _looks_like_quote_request(payload):
@@ -57,6 +66,7 @@ class OperatorRequest:
         normalized_kind = request_kind.replace("-", "_")
         if normalized_kind not in {
             "supplier_document_intake",
+            "review_queue",
             "quote_draft",
             "quote_revision",
         }:
@@ -74,6 +84,8 @@ class OperatorRequest:
     def delegated_tool_name(self) -> str:
         if self.request_kind == "supplier_document_intake":
             return "ingest.process_supplier_document"
+        if self.request_kind == "review_queue":
+            return "memory.list_reviews"
         if self.request_kind == "quote_revision":
             return "quotes.revise_draft"
         return "quotes.create_draft"
@@ -88,6 +100,22 @@ class OperatorRequest:
             payload.pop("kind", None)
             payload.pop("operator_message", None)
             payload.pop("message", None)
+            return payload
+
+        if self.request_kind == "review_queue":
+            nested = self.payload.get("review_queue")
+            if isinstance(nested, dict):
+                payload = dict(nested)
+            else:
+                payload = dict(self.payload)
+                payload.pop("request_kind", None)
+                payload.pop("kind", None)
+                payload.pop("operator_message", None)
+                payload.pop("message", None)
+            if "review_status" in payload and "status" not in payload:
+                payload["status"] = payload.pop("review_status")
+            if "review_scope" in payload and "scope" not in payload:
+                payload["scope"] = payload.pop("review_scope")
             return payload
 
         if self.request_kind == "quote_revision":

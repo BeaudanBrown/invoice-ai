@@ -45,6 +45,7 @@ Completed:
 - extended the planner so explicit `remember`/`note` style operator instructions can surface memory suggestions during conversational turns, quote work, and supplier intake review without mutating durable memory automatically
 - wired planner-generated memory reviews into the shared approval artifact store so chat-driven memory review flows now materialize durable `summary.md`, `request.json`, and `diff.json` files under the approvals tree
 - added a first review index under `memory.list_reviews` and `memory.get_review` so operator-facing clients can enumerate and inspect persisted memory review artifacts without scanning the filesystem directly
+- routed simple review-queue inspection through the planner/orchestrator surface so the main chat-facing interface can answer `show pending memory reviews` style requests without exposing raw memory tools
 - implemented the first quote orchestration tool layer under `src/invoice_ai/quotes/` with customer/item resolution, ERP-backed quote context gathering, draft quotation creation, and draft quotation revision
 - implemented the first filesystem-backed quotation revision store under `src/invoice_ai/revisions/` so working quote revisions persist outside ERPNext
 - extended the shared tool CLI so `quotes.prepare_context`, `quotes.create_draft`, and `quotes.revise_draft` can drive ERP-backed quotation workflows and refreshed preview artifacts

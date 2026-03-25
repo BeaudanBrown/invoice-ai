@@ -95,3 +95,13 @@ while the planner reuses:
 As the planner gets smarter, the orchestrator should stay thin.
 
 It should keep normalizing routing, conversation state, and response shape, while the existing delegated tools remain the only code that knows how to create or revise ERP-backed drafts.
+## Supported Request Kinds
+
+The orchestrator currently accepts these operator request kinds:
+
+- `supplier_document_intake`
+- `review_queue`
+- `quote_draft`
+- `quote_revision`
+
+`review_queue` currently delegates to `memory.list_reviews`, which lets the main operator-facing surface answer pending memory-review questions without exposing the lower-level memory tool family directly.

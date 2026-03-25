@@ -155,6 +155,7 @@ That layer:
 Supported request kinds today:
 
 - `supplier_document_intake`
+- `review_queue`
 - `quote_draft`
 - `quote_revision`
 
@@ -181,6 +182,7 @@ That layer:
 - persists planner-generated memory reviews through the shared approval artifact pipeline
 - currently supports narrow planning for:
   - supplier document intake
+  - memory review queue inspection
   - quote drafting
   - quote revision
   - memory suggestion review turns

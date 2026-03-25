@@ -12,6 +12,14 @@ class PlannerParseError(ValueError):
 
 
 def plan_operator_request(turn: PlannerTurn) -> dict[str, Any]:
+    review_queue = _review_queue_payload(turn.message)
+    if review_queue is not None:
+        return {
+            "request_kind": "review_queue",
+            "message": turn.message,
+            "review_queue": review_queue,
+        }
+
     if is_memory_only_turn(turn.message):
         return {
             "request_kind": "memory_suggestion",
@@ -42,6 +50,36 @@ def plan_operator_request(turn: PlannerTurn) -> dict[str, Any]:
     raise PlannerParseError(
         "Planner could not safely classify the operator turn into a supported request"
     )
+
+
+def _review_queue_payload(message: str) -> dict[str, Any] | None:
+    lower = message.lower()
+    if "review" not in lower:
+        return None
+    if not any(token in lower for token in ("show", "list", "what", "pending", "queue")):
+        return None
+    if "memory" not in lower:
+        return None
+
+    payload: dict[str, Any] = {"status": "pending"}
+    if "accepted" in lower:
+        payload["status"] = "accepted"
+    elif "rejected" in lower:
+        payload["status"] = "rejected"
+    elif "all" in lower:
+        payload.pop("status", None)
+
+    if "client" in lower:
+        payload["scope"] = "clients"
+    elif "supplier" in lower:
+        payload["scope"] = "suppliers"
+    elif "job" in lower:
+        payload["scope"] = "jobs"
+    elif "operator" in lower:
+        payload["scope"] = "operator"
+    elif "global" in lower:
+        payload["scope"] = "global"
+    return payload
 
 
 def _has_supplier_attachment(attachments: tuple[PlannerAttachment, ...]) -> bool:

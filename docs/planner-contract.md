@@ -170,3 +170,5 @@ Those persisted memory reviews can now be enumerated through:
 
 - `memory.list_reviews`
 - `memory.get_review`
+
+The planner can now also route simple operator questions like `show pending memory reviews` into the orchestrator's `review_queue` request kind, so review-queue inspection is available through the main chat-facing surface.

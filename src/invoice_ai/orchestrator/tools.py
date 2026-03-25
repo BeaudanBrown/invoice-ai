@@ -5,6 +5,7 @@ from typing import Any
 from ..config import RuntimeConfig
 from ..erp.schemas import ToolRequest, ToolResponse
 from ..ingest.tools import IngestToolExecutor
+from ..memory.tools import MemoryToolExecutor
 from ..quotes.tools import QuoteToolExecutor
 from .contract import conversation_state_for, next_request_contract
 from .models import OperatorRequest
@@ -14,6 +15,7 @@ class OrchestratorToolExecutor:
     def __init__(self, *, config: RuntimeConfig) -> None:
         self.config = config
         self.ingest = IngestToolExecutor.from_runtime_config(config)
+        self.memory = MemoryToolExecutor.from_runtime_config(config)
         self.quotes = QuoteToolExecutor.from_runtime_config(config)
 
     @classmethod
@@ -114,12 +116,19 @@ class OrchestratorToolExecutor:
     def _executor_for(self, tool_name: str) -> object:
         if tool_name.startswith("ingest."):
             return self.ingest
+        if tool_name.startswith("memory."):
+            return self.memory
         if tool_name.startswith("quotes."):
             return self.quotes
         raise ValueError(f"Unsupported orchestrator delegate: {tool_name}")
 
 
 def _stage_for(request_kind: str, response: ToolResponse) -> str:
+    if request_kind == "review_queue":
+        if response.status == "success":
+            return "review_queue_listed"
+        return "review_queue"
+
     if request_kind == "supplier_document_intake":
         delegated_stage = str(response.data.get("stage") or "")
         if response.status == "success":
@@ -220,6 +229,8 @@ def _collect_doc_refs(payload: Any) -> list[dict[str, Any]]:
 
 
 def _collect_erp_refs(*, request_kind: str, response: ToolResponse) -> list[dict[str, Any]]:
+    if request_kind == "review_queue":
+        return []
     refs = _collect_doc_refs(response.as_dict())
     data = response.data
 
