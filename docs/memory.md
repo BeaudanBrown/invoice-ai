@@ -106,6 +106,8 @@ Memory suggestions should be review-gated by default:
 
 The first implementation stores suggestions alongside memory under the persistent application state tree and reuses the general approval artifact flow so suggestion proposals can be inspected with the same review tooling as other gated actions.
 
+Planner-generated memory reviews now also write those approval artifacts eagerly, so operator chat flows and mixed quote/intake flows both leave durable review records under the approvals tree.
+
 The planner can now also surface these suggestions from explicit operator turns, including:
 
 - pure conversational memory capture such as `remember client Acme prefers itemized materials`

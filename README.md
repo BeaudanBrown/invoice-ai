@@ -178,6 +178,7 @@ That layer:
 - consults markdown memory from the configured memory directory
 - can optionally use the configured local Ollama endpoint when `defaults.planner.use_model_assist` is enabled
 - can surface review-gated memory suggestions from explicit conversational instructions
+- persists planner-generated memory reviews through the shared approval artifact pipeline
 - currently supports narrow planning for:
   - supplier document intake
   - quote drafting
@@ -206,6 +207,7 @@ That layer:
 - stores pending memory suggestions under the same persistent memory tree
 - returns memory suggestions as review-gated proposals before markdown memory is changed
 - only mutates durable markdown memory when a suggestion is explicitly accepted
+- writes planner-generated memory review artifacts under the approvals tree so chat-driven review work has the same durable summaries and diffs as other approval-gated actions
 
 ## Current Service Surface
 

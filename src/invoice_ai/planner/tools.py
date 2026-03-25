@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ..approvals.store import ApprovalStore
 from ..config import RuntimeConfig
 from ..erp.schemas import ToolRequest, ToolResponse
 from ..memory.tools import MemoryToolExecutor
@@ -12,6 +13,7 @@ from .parser import PlannerParseError
 class PlannerToolExecutor:
     def __init__(self, *, config: RuntimeConfig) -> None:
         self.config = config
+        self.approvals = ApprovalStore(config.paths.approvals_dir)
         self.orchestrator = OrchestratorToolExecutor.from_runtime_config(config)
         self.memory = MemoryToolExecutor.from_runtime_config(config)
         self.engine = PlannerEngine(config=config)
@@ -222,10 +224,12 @@ class PlannerToolExecutor:
             }
             approval = response.approval
             if approval is not None:
+                approval_dir = self.approvals.write(response)
                 for kind, path in approval.artifacts.as_dict().items():
                     if path is None:
                         continue
                     review["artifacts"].append({"kind": kind, "path": path})
+                review["approval_dir"] = str(approval_dir)
             reviews.append(review)
         return reviews
 
