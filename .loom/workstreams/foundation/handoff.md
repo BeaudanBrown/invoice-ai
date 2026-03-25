@@ -70,4 +70,4 @@ Use the foundation Beads epic to implement:
 
 Current Beads child tasks:
 
-- `coordinator-xc9`: surface memory suggestions from planner and review flows so future conversational and review work can propose memory updates without bypassing explicit acceptance
+- `coordinator-0qp`: persist planner-generated memory review artifacts so chat-driven review flows have the same durable audit trail as other approval-gated actions
