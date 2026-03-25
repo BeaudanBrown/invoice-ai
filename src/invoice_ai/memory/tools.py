@@ -20,6 +20,8 @@ class MemoryToolExecutor:
             "memory.get_document": self.get_document,
             "memory.upsert_document": self.upsert_document,
             "memory.record_note": self.record_note,
+            "memory.list_reviews": self.list_reviews,
+            "memory.get_review": self.get_review,
             "memory.list_suggestions": self.list_suggestions,
             "memory.get_suggestion": self.get_suggestion,
             "memory.suggest_update": self.suggest_update,
@@ -114,6 +116,46 @@ class MemoryToolExecutor:
             tool_name=request.tool_name,
             status="success",
             data={"document": document.as_context()},
+        )
+
+    def list_reviews(self, request: ToolRequest) -> ToolResponse:
+        status = request.payload.get("status", "pending")
+        scope = request.payload.get("scope")
+        suggestions = self.store.list_suggestions(
+            status=None if status is None else str(status),
+            scope=None if scope is None else str(scope),
+        )
+        return ToolResponse(
+            request_id=request.request_id,
+            tool_name=request.tool_name,
+            status="success",
+            data={"reviews": [self._review_entry(suggestion) for suggestion in suggestions]},
+        )
+
+    def get_review(self, request: ToolRequest) -> ToolResponse:
+        suggestion = self.store.get_suggestion(
+            suggestion_id=str(request.payload["suggestion_id"])
+        )
+        if suggestion is None:
+            return ToolResponse(
+                request_id=request.request_id,
+                tool_name=request.tool_name,
+                status="not_found",
+                errors=[
+                    {
+                        "code": "memory.review_not_found",
+                        "message": (
+                            "No memory review found for "
+                            f"{request.payload['suggestion_id']}"
+                        ),
+                    }
+                ],
+            )
+        return ToolResponse(
+            request_id=request.request_id,
+            tool_name=request.tool_name,
+            status="success",
+            data={"review": self._review_entry(suggestion)},
         )
 
     def list_suggestions(self, request: ToolRequest) -> ToolResponse:
@@ -250,3 +292,49 @@ class MemoryToolExecutor:
             status="success",
             data={"suggestion": suggestion.as_context()},
         )
+
+    def _review_entry(self, suggestion) -> dict[str, object]:
+        artifacts = approval_artifact_paths(
+            self.config.paths.approvals_dir,
+            suggestion.suggestion_id,
+        )
+        paths = artifacts.as_dict()
+        existing_artifacts = {
+            key: value
+            for key, value in paths.items()
+            if value is not None and self._path_exists(value)
+        }
+        summary_preview = None
+        summary_path = paths.get("summary_markdown_path")
+        if summary_path is not None and self._path_exists(summary_path):
+            summary_preview = self._summary_preview(summary_path)
+
+        return {
+            "suggestion_id": suggestion.suggestion_id,
+            "status": suggestion.status,
+            "scope": suggestion.scope,
+            "slug": suggestion.slug,
+            "subject": suggestion.subject,
+            "created_at": suggestion.created_at,
+            "updated_at": suggestion.updated_at,
+            "reviewed_at": suggestion.reviewed_at,
+            "decision_note": suggestion.decision_note,
+            "suggestion": suggestion.as_context(),
+            "artifacts": paths,
+            "existing_artifacts": existing_artifacts,
+            "summary_preview": summary_preview,
+        }
+
+    @staticmethod
+    def _path_exists(path: str) -> bool:
+        from pathlib import Path
+
+        return Path(path).exists()
+
+    @staticmethod
+    def _summary_preview(path: str) -> str:
+        from pathlib import Path
+
+        lines = Path(path).read_text(encoding="utf-8").splitlines()
+        preview = [line for line in lines if line.strip()][:3]
+        return "\n".join(preview)

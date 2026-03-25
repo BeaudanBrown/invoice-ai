@@ -165,3 +165,8 @@ When planner-generated memory reviews require approval, the planner now also mat
 - `diff.json`
 
 This keeps chat-driven memory review work aligned with the same durable approval surface used by other gated actions.
+
+Those persisted memory reviews can now be enumerated through:
+
+- `memory.list_reviews`
+- `memory.get_review`

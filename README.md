@@ -193,6 +193,8 @@ The current memory layer lives under `src/invoice_ai/memory/` and exposes:
 - `memory.get_document`
 - `memory.upsert_document`
 - `memory.record_note`
+- `memory.list_reviews`
+- `memory.get_review`
 - `memory.list_suggestions`
 - `memory.get_suggestion`
 - `memory.suggest_update`
@@ -208,6 +210,7 @@ That layer:
 - returns memory suggestions as review-gated proposals before markdown memory is changed
 - only mutates durable markdown memory when a suggestion is explicitly accepted
 - writes planner-generated memory review artifacts under the approvals tree so chat-driven review work has the same durable summaries and diffs as other approval-gated actions
+- exposes a review index over those persisted memory artifacts so operator-facing clients can list and inspect pending memory reviews without scanning directories directly
 
 ## Current Service Surface
 

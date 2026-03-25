@@ -87,6 +87,8 @@ The first explicit memory tools now live under `src/invoice_ai/memory/`:
 - `memory.get_document`
 - `memory.upsert_document`
 - `memory.record_note`
+- `memory.list_reviews`
+- `memory.get_review`
 - `memory.list_suggestions`
 - `memory.get_suggestion`
 - `memory.suggest_update`
@@ -107,6 +109,8 @@ Memory suggestions should be review-gated by default:
 The first implementation stores suggestions alongside memory under the persistent application state tree and reuses the general approval artifact flow so suggestion proposals can be inspected with the same review tooling as other gated actions.
 
 Planner-generated memory reviews now also write those approval artifacts eagerly, so operator chat flows and mixed quote/intake flows both leave durable review records under the approvals tree.
+
+The memory layer now also exposes a simple review index over those records so callers can enumerate pending or accepted memory reviews and inspect their artifact paths and summary preview without walking the approvals directory directly.
 
 The planner can now also surface these suggestions from explicit operator turns, including:
 
