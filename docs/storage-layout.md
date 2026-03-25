@@ -26,6 +26,8 @@ Recommended top-level directories:
 - `/var/lib/invoice-ai/approvals`
 - `/var/lib/invoice-ai/revisions`
 - `/var/lib/invoice-ai/artifacts`
+- `/var/lib/invoice-ai/jobs`
+- `/var/lib/invoice-ai/events`
 - `/var/lib/invoice-ai/cache`
 
 ## Memory
@@ -170,6 +172,50 @@ Retention policy:
 - keep the latest approved or operator-visible artifacts
 - superseded previews may be compacted if the corresponding revision snapshot still exists
 
+## Jobs
+
+Path:
+
+- `/var/lib/invoice-ai/jobs`
+
+Purpose:
+
+- persist long-running or replayable control-plane work units
+
+Examples:
+
+- supplier-document processing jobs
+- quote/invoice drafting jobs
+- review-action jobs
+
+Retention policy:
+
+- keep recent job metadata and terminal state for audit and debugging
+- allow old completed jobs to be compacted once their linked artifacts and ERP refs remain discoverable
+
+## Events
+
+Path:
+
+- `/var/lib/invoice-ai/events`
+
+Purpose:
+
+- store append-only audit-style event records for the operator control plane
+
+Examples:
+
+- request accepted
+- planner produced operator request
+- ERP mutation attempted
+- approval created
+- review accepted or rejected
+
+Retention policy:
+
+- preserve as the main local audit trail
+- rotate by size or age only with an explicit retention policy
+
 ## Cache
 
 Path:
@@ -200,6 +246,8 @@ The NixOS module should expose `stateDir` as the root and provide stable default
 - approvals directory
 - revisions directory
 - artifacts directory
+- jobs directory
+- events directory
 - cache directory
 
 Host-specific backup and filesystem choices should remain in `nix-dotfiles`.

@@ -2,7 +2,7 @@
 
 ## Status
 
-Foundation setup started on 2026-03-21.
+Foundation setup started on 2026-03-21 and is now complete as an architecture-and-scaffold lane.
 
 Completed:
 
@@ -61,16 +61,21 @@ Not completed:
 - no exact retention policy has been implemented in code yet
 - the ERP connector still needs broader semantic tool coverage and tighter ERPNext field mappings
 - the current quote preview renderer is a deterministic stub, not a production template
+- the HTTP service is not yet hardened with auth, job tracking, idempotency, or audit logging
+- the sales-invoice path is still missing
+- the review surface is still incomplete beyond listing and partial inspection flows
+- the extraction and ingest path still needs duplicate detection and stronger confidence handling
 
 ## Next Action
 
-Use the foundation Beads epic to implement:
+Do not continue the old foundation microtask trail.
 
-1. the first composed ingest-to-ERP loop that chains ingest and ERP tools end to end
-2. the first runnable service wiring into `nix-dotfiles`
-3. tighter ERPNext field mappings and broader semantic tool coverage where the first vertical slice needs them
-4. any cleanup or retention behavior needed around revisions, approvals, and generated artifacts
+Use the hardening/completion workstream instead to implement:
 
-Current Beads child tasks:
+1. control-plane hardening around auth, jobs, idempotency, and audit
+2. sales-invoice support and broader ERP semantic coverage
+3. full operator-facing review inspection and action flows
+4. stronger extraction, duplicate detection, and ingest robustness
+5. actual `nix-dotfiles` integration and end-to-end verification
 
-- `coordinator-vff`: inspect and act on memory reviews through the operator surface so the main chat-facing interface can move from listing reviews to inspecting specific ones
+The foundation handoff is retained only as historical context. Active continuation should read the hardening workstream files once they exist.

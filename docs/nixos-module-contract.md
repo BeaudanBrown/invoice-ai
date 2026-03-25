@@ -12,7 +12,7 @@ For the first implementation, the NixOS module owns:
 - its listen address and port
 - its dependency endpoints and secret file wiring
 
-For the first implementation, the NixOS module does not own:
+For the current implementation, the NixOS module does not own:
 
 - `ERPNext` deployment
 - MariaDB or Redis for `ERPNext`
@@ -99,13 +99,13 @@ Expected inputs:
 
 ### n8n
 
-Optional in the first runnable slice.
+Optional integration only.
 
 Expected inputs:
 
 - base URL
 
-The first implementation should not require `n8n` just to make the core chat-to-ERP loop work.
+The core control plane should not depend on `n8n` for the primary operator path. If `n8n` is used later, it should sit at the edges for automation, scheduling, or integration work rather than replace the repo-local planner/orchestrator.
 
 ## Runtime Shape
 

@@ -47,10 +47,15 @@
 - `nix-dotfiles` should be able to import the flake directly
 - persistent mutable app storage should live under `/var/lib/invoice-ai/`
 
+### Orchestration
+
+- the repo-local `invoice-ai` control plane is now the canonical planner/orchestrator for the operator request path
+- `n8n` is optional integration infrastructure for later automation and should not be required for the core chat-to-ERP loop
+
 ## Remaining Open Items
 
-1. How should jobs and work orders be modeled in `ERPNext` for this project?
-2. What exact ERPNext-native pricing constructs should the agent prefer first for labor and material pricing?
-3. What should the persistent on-disk memory layout under `/var/lib/invoice-ai/` look like?
-4. How should approval artifacts and structured diffs be represented on disk?
-5. What is the exact first API contract between the main agent and the ERP mutation layer?
+1. What exact job and work-order model in `ERPNext` should anchor quote and invoice drafting for field-service work?
+2. What exact ERPNext-native pricing constructs should the agent prefer first for labor, travel, subcontractor recovery, and materials?
+3. What should the hardening-stage auth, idempotency, and audit model be for the operator API?
+4. What retention and compaction policy should apply to revisions, approvals, ingest records, jobs, and events?
+5. What is the exact end-to-end deployment and verification path through `nix-dotfiles` on the NAS host?

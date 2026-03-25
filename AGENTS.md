@@ -7,9 +7,11 @@ This repository is a Nix-native project for building a self-hosted AI-assisted i
 1. This file
 2. `README.md`
 3. `docs/architecture.md`
-4. `docs/decisions/foundation-open-questions.md`
-5. `.loom/workstreams/<workstream>/context.md`
-6. `.loom/workstreams/<workstream>/handoff.md`
+4. `docs/architecture-review-2026-03.md`
+5. `docs/completion-plan.md`
+6. `docs/decisions/foundation-open-questions.md`
+7. `.loom/workstreams/<workstream>/context.md`
+8. `.loom/workstreams/<workstream>/handoff.md`
 
 ## Repository Shape
 
@@ -24,6 +26,7 @@ This repository is a Nix-native project for building a self-hosted AI-assisted i
 - Prefer local/open models and local services over hosted APIs unless a decision record explicitly approves an exception.
 - Treat invoice generation as a reviewed workflow, not an autonomous fire-and-forget action, until the approval boundary is deliberately changed.
 - Capture unresolved product and architecture questions in Beads and durable docs rather than in ad hoc notes.
+- Treat the repo-local `invoice-ai` control plane as the canonical operator-path orchestrator; external tools such as `n8n` are optional integrations, not the primary runtime.
 - If the NixOS service contract changes, update `flake.nix`, `modules/invoice-ai.nix`, and the relevant docs in the same task.
 
 ## Nix Hosting Contract

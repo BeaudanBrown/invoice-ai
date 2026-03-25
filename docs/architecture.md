@@ -6,13 +6,15 @@ Build a self-hosted quoting and invoicing platform that can draft outbound quote
 
 ## Working Architecture Direction
 
-The current preferred architecture is:
+The current architecture direction is:
 
 - `ERPNext` as the canonical system of record for customers, items/services, taxes, sales invoices, purchase invoices, and price history
-- `n8n` as the orchestration layer for drafting flows, ingestion flows, approval steps, and external sync
-- `Ollama` for local LLM inference
+- the repo-local `invoice-ai` control plane as the canonical planner/orchestrator/review surface
+- `Ollama` for local LLM inference when model assistance is useful
 - `Docling` for structured document extraction from supplier invoices and receipts
-- a repo-local application layer only where custom logic is required for delegation, retrieval, normalization, review, and memory
+- optional external automation tools such as `n8n`, kept outside the core request path unless a later integration needs them
+
+This reflects the implemented system more accurately than the original foundation stack notes. The repo now already contains its own control plane, so external workflow tools should be treated as integrations, not as the primary orchestrator.
 
 ## Core Capabilities
 
@@ -62,6 +64,8 @@ Target flow:
 ## Primary Specs
 
 - `docs/foundation-spec.md`
+- `docs/architecture-review-2026-03.md`
+- `docs/completion-plan.md`
 - `docs/erpnext-entity-map.md`
 - `docs/erp-tool-contract.md`
 - `docs/erp-tool-schemas.md`
