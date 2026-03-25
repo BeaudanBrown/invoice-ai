@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from ..erp.schemas import ApprovalPayload, ToolRequest, ToolResponse, approval_artifact_paths
 from ..config import RuntimeConfig
-from ..erp.schemas import ToolRequest, ToolResponse
 from .store import MemoryStore
 
 
@@ -20,6 +20,11 @@ class MemoryToolExecutor:
             "memory.get_document": self.get_document,
             "memory.upsert_document": self.upsert_document,
             "memory.record_note": self.record_note,
+            "memory.list_suggestions": self.list_suggestions,
+            "memory.get_suggestion": self.get_suggestion,
+            "memory.suggest_update": self.suggest_update,
+            "memory.accept_suggestion": self.accept_suggestion,
+            "memory.reject_suggestion": self.reject_suggestion,
         }
         handler = handlers.get(request.tool_name)
         if handler is None:
@@ -109,4 +114,139 @@ class MemoryToolExecutor:
             tool_name=request.tool_name,
             status="success",
             data={"document": document.as_context()},
+        )
+
+    def list_suggestions(self, request: ToolRequest) -> ToolResponse:
+        status = request.payload.get("status")
+        scope = request.payload.get("scope")
+        suggestions = self.store.list_suggestions(
+            status=None if status is None else str(status),
+            scope=None if scope is None else str(scope),
+        )
+        return ToolResponse(
+            request_id=request.request_id,
+            tool_name=request.tool_name,
+            status="success",
+            data={"suggestions": [suggestion.as_context() for suggestion in suggestions]},
+        )
+
+    def get_suggestion(self, request: ToolRequest) -> ToolResponse:
+        suggestion = self.store.get_suggestion(
+            suggestion_id=str(request.payload["suggestion_id"])
+        )
+        if suggestion is None:
+            return ToolResponse(
+                request_id=request.request_id,
+                tool_name=request.tool_name,
+                status="not_found",
+                errors=[
+                    {
+                        "code": "memory.suggestion_not_found",
+                        "message": (
+                            "No memory suggestion found for "
+                            f"{request.payload['suggestion_id']}"
+                        ),
+                    }
+                ],
+            )
+        return ToolResponse(
+            request_id=request.request_id,
+            tool_name=request.tool_name,
+            status="success",
+            data={"suggestion": suggestion.as_context()},
+        )
+
+    def suggest_update(self, request: ToolRequest) -> ToolResponse:
+        suggestion = self.store.suggest_update(
+            action=str(request.payload["action"]),
+            scope=str(request.payload["scope"]),
+            slug=None if request.payload.get("slug") is None else str(request.payload["slug"]),
+            subject=None
+            if request.payload.get("subject") is None
+            else str(request.payload["subject"]),
+            metadata=dict(request.payload.get("metadata", {})),
+            body=None if request.payload.get("body") is None else str(request.payload["body"]),
+            note=None if request.payload.get("note") is None else str(request.payload["note"]),
+            rationale=(
+                None
+                if request.payload.get("rationale") is None
+                else str(request.payload["rationale"])
+            ),
+            source=dict(request.payload.get("source", {})),
+        )
+        approval = ApprovalPayload(
+            approval_id=suggestion.suggestion_id,
+            action=f"memory.{suggestion.action}",
+            summary=(
+                f"Review memory suggestion for {suggestion.scope}/{suggestion.slug}"
+            ),
+            target={
+                "doctype": "MemoryDocument",
+                "name": f"{suggestion.scope}/{suggestion.slug}",
+                "scope": suggestion.scope,
+                "slug": suggestion.slug,
+            },
+            proposed_changes={
+                "action": suggestion.action,
+                "metadata": suggestion.metadata,
+                "body": suggestion.body,
+                "note": suggestion.note,
+                "rationale": suggestion.rationale,
+                "source": suggestion.source,
+            },
+            artifacts=approval_artifact_paths(
+                self.config.paths.approvals_dir, suggestion.suggestion_id
+            ),
+        )
+        return ToolResponse(
+            request_id=request.request_id,
+            tool_name=request.tool_name,
+            status="approval_required",
+            data={"suggestion": suggestion.as_context()},
+            approval=approval,
+        )
+
+    def accept_suggestion(self, request: ToolRequest) -> ToolResponse:
+        suggestion, document = self.store.accept_suggestion(
+            suggestion_id=str(request.payload["suggestion_id"]),
+            reviewer=(
+                None
+                if request.payload.get("reviewer") is None
+                else str(request.payload["reviewer"])
+            ),
+            decision_note=(
+                None
+                if request.payload.get("decision_note") is None
+                else str(request.payload["decision_note"])
+            ),
+        )
+        return ToolResponse(
+            request_id=request.request_id,
+            tool_name=request.tool_name,
+            status="success",
+            data={
+                "suggestion": suggestion.as_context(),
+                "document": document.as_context(),
+            },
+        )
+
+    def reject_suggestion(self, request: ToolRequest) -> ToolResponse:
+        suggestion = self.store.reject_suggestion(
+            suggestion_id=str(request.payload["suggestion_id"]),
+            reviewer=(
+                None
+                if request.payload.get("reviewer") is None
+                else str(request.payload["reviewer"])
+            ),
+            decision_note=(
+                None
+                if request.payload.get("decision_note") is None
+                else str(request.payload["decision_note"])
+            ),
+        )
+        return ToolResponse(
+            request_id=request.request_id,
+            tool_name=request.tool_name,
+            status="success",
+            data={"suggestion": suggestion.as_context()},
         )

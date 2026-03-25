@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import re
 from typing import Any
+import uuid
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,46 @@ class MemoryDocument:
             "path": str(self.path),
             "metadata": self.metadata,
             "body": self.body,
+        }
+
+
+@dataclass(frozen=True)
+class MemorySuggestion:
+    suggestion_id: str
+    action: str
+    scope: str
+    slug: str
+    subject: str | None
+    status: str
+    metadata: dict[str, Any]
+    body: str | None
+    note: str | None
+    rationale: str | None
+    source: dict[str, Any]
+    created_at: str
+    updated_at: str
+    reviewed_at: str | None
+    decision_note: str | None
+    current_document: dict[str, Any] | None
+
+    def as_context(self) -> dict[str, Any]:
+        return {
+            "suggestion_id": self.suggestion_id,
+            "action": self.action,
+            "scope": self.scope,
+            "slug": self.slug,
+            "subject": self.subject,
+            "status": self.status,
+            "metadata": self.metadata,
+            "body": self.body,
+            "note": self.note,
+            "rationale": self.rationale,
+            "source": self.source,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "reviewed_at": self.reviewed_at,
+            "decision_note": self.decision_note,
+            "current_document": self.current_document,
         }
 
 
@@ -59,6 +100,35 @@ class MemoryStore:
         if not path.exists():
             return None
         return self._load_document(scope=scope, path=path)
+
+    def list_suggestions(
+        self,
+        *,
+        status: str | None = None,
+        scope: str | None = None,
+    ) -> list[MemorySuggestion]:
+        suggestions_dir = self._suggestions_dir()
+        if not suggestions_dir.exists():
+            return []
+
+        selected_status = None if status is None else _validated_suggestion_status(status)
+        selected_scope = None if scope is None else _validated_scope(scope)
+
+        suggestions: list[MemorySuggestion] = []
+        for path in sorted(suggestions_dir.glob("*.json")):
+            suggestion = self._load_suggestion(path)
+            if selected_status is not None and suggestion.status != selected_status:
+                continue
+            if selected_scope is not None and suggestion.scope != selected_scope:
+                continue
+            suggestions.append(suggestion)
+        return suggestions
+
+    def get_suggestion(self, *, suggestion_id: str) -> MemorySuggestion | None:
+        path = self._suggestion_path(suggestion_id)
+        if not path.exists():
+            return None
+        return self._load_suggestion(path)
 
     def upsert_document(
         self,
@@ -121,6 +191,118 @@ class MemoryStore:
             metadata=metadata,
             body=body,
         )
+
+    def suggest_update(
+        self,
+        *,
+        action: str,
+        scope: str,
+        slug: str | None = None,
+        subject: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        body: str | None = None,
+        note: str | None = None,
+        rationale: str | None = None,
+        source: dict[str, Any] | None = None,
+    ) -> MemorySuggestion:
+        normalized_action = _validated_suggestion_action(action)
+        normalized_scope = _validated_scope(scope)
+        target_slug = slug or _slugify(subject)
+        if not target_slug:
+            raise ValueError("Memory suggestion requires slug or subject")
+
+        payload_metadata = dict(metadata or {})
+        payload_source = dict(source or {})
+        suggestion_id = f"memory-suggestion-{uuid.uuid4().hex}"
+        timestamp = datetime.utcnow().isoformat() + "Z"
+
+        if normalized_action == "upsert_document":
+            if body is None or not body.strip():
+                raise ValueError("Document suggestions require body content")
+            suggestion_body = body.strip()
+            suggestion_note = None
+        else:
+            if note is None or not note.strip():
+                raise ValueError("Note suggestions require note content")
+            suggestion_body = None
+            suggestion_note = note.strip()
+
+        current_document = self.get_document(scope=normalized_scope, slug=target_slug)
+        suggestion = MemorySuggestion(
+            suggestion_id=suggestion_id,
+            action=normalized_action,
+            scope=normalized_scope,
+            slug=target_slug,
+            subject=subject,
+            status="pending",
+            metadata=payload_metadata,
+            body=suggestion_body,
+            note=suggestion_note,
+            rationale=None if rationale is None else rationale.strip() or None,
+            source=payload_source,
+            created_at=timestamp,
+            updated_at=timestamp,
+            reviewed_at=None,
+            decision_note=None,
+            current_document=(
+                None if current_document is None else current_document.as_context()
+            ),
+        )
+        self._write_suggestion(suggestion)
+        return suggestion
+
+    def accept_suggestion(
+        self,
+        *,
+        suggestion_id: str,
+        reviewer: str | None = None,
+        decision_note: str | None = None,
+    ) -> tuple[MemorySuggestion, MemoryDocument]:
+        suggestion = self._require_pending_suggestion(suggestion_id)
+
+        if suggestion.action == "upsert_document":
+            document = self.upsert_document(
+                scope=suggestion.scope,
+                slug=suggestion.slug,
+                subject=suggestion.subject,
+                metadata=suggestion.metadata,
+                body=suggestion.body,
+            )
+        else:
+            assert suggestion.note is not None
+            document = self.record_note(
+                scope=suggestion.scope,
+                slug=suggestion.slug,
+                subject=suggestion.subject,
+                note=suggestion.note,
+                metadata=suggestion.metadata,
+            )
+
+        updated = self._reviewed_suggestion(
+            suggestion,
+            status="accepted",
+            reviewer=reviewer,
+            decision_note=decision_note,
+        )
+        self._write_suggestion(updated)
+        return updated, document
+
+    def reject_suggestion(
+        self,
+        *,
+        suggestion_id: str,
+        reviewer: str | None = None,
+        decision_note: str | None = None,
+    ) -> MemorySuggestion:
+        suggestion = self._require_pending_suggestion(suggestion_id)
+        updated = self._reviewed_suggestion(
+            suggestion,
+            status="rejected",
+            reviewer=reviewer,
+            decision_note=decision_note,
+        )
+        self._write_suggestion(updated)
+        return updated
 
     def _selected_documents(
         self,
@@ -206,6 +388,35 @@ class MemoryStore:
                 documents.append(document)
         return documents
 
+    def _load_suggestion(self, path: Path) -> MemorySuggestion:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        return MemorySuggestion(
+            suggestion_id=str(payload["suggestion_id"]),
+            action=str(payload["action"]),
+            scope=str(payload["scope"]),
+            slug=str(payload["slug"]),
+            subject=None if payload.get("subject") is None else str(payload["subject"]),
+            status=str(payload["status"]),
+            metadata=dict(payload.get("metadata", {})),
+            body=None if payload.get("body") is None else str(payload["body"]),
+            note=None if payload.get("note") is None else str(payload["note"]),
+            rationale=(
+                None if payload.get("rationale") is None else str(payload["rationale"])
+            ),
+            source=dict(payload.get("source", {})),
+            created_at=str(payload["created_at"]),
+            updated_at=str(payload["updated_at"]),
+            reviewed_at=(
+                None if payload.get("reviewed_at") is None else str(payload["reviewed_at"])
+            ),
+            decision_note=(
+                None
+                if payload.get("decision_note") is None
+                else str(payload["decision_note"])
+            ),
+            current_document=payload.get("current_document"),
+        )
+
     def _load_document(self, *, scope: str, path: Path) -> MemoryDocument:
         raw = path.read_text(encoding="utf-8")
         metadata, body = _split_frontmatter(raw)
@@ -219,6 +430,64 @@ class MemoryStore:
 
     def _document_path(self, *, scope: str, slug: str) -> Path:
         return self.root / scope / f"{_slugify(slug)}.md"
+
+    def _suggestions_dir(self) -> Path:
+        return self.root / "_suggestions"
+
+    def _suggestion_path(self, suggestion_id: str) -> Path:
+        return self._suggestions_dir() / f"{_slugify(suggestion_id)}.json"
+
+    def _write_suggestion(self, suggestion: MemorySuggestion) -> None:
+        path = self._suggestion_path(suggestion.suggestion_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(suggestion.as_context(), indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+    def _require_pending_suggestion(self, suggestion_id: str) -> MemorySuggestion:
+        suggestion = self.get_suggestion(suggestion_id=suggestion_id)
+        if suggestion is None:
+            raise ValueError(f"Unknown memory suggestion: {suggestion_id}")
+        if suggestion.status != "pending":
+            raise ValueError(
+                f"Memory suggestion {suggestion_id} is already {suggestion.status}"
+            )
+        return suggestion
+
+    def _reviewed_suggestion(
+        self,
+        suggestion: MemorySuggestion,
+        *,
+        status: str,
+        reviewer: str | None,
+        decision_note: str | None,
+    ) -> MemorySuggestion:
+        timestamp = datetime.utcnow().isoformat() + "Z"
+        metadata = dict(suggestion.metadata)
+        if reviewer:
+            metadata.setdefault("review", {})
+            if isinstance(metadata["review"], dict):
+                metadata["review"] = dict(metadata["review"])
+                metadata["review"]["reviewer"] = reviewer
+        return MemorySuggestion(
+            suggestion_id=suggestion.suggestion_id,
+            action=suggestion.action,
+            scope=suggestion.scope,
+            slug=suggestion.slug,
+            subject=suggestion.subject,
+            status=status,
+            metadata=metadata,
+            body=suggestion.body,
+            note=suggestion.note,
+            rationale=suggestion.rationale,
+            source=suggestion.source,
+            created_at=suggestion.created_at,
+            updated_at=timestamp,
+            reviewed_at=timestamp,
+            decision_note=None if decision_note is None else decision_note.strip() or None,
+            current_document=suggestion.current_document,
+        )
 
     def _merge_defaults(
         self,
@@ -353,4 +622,18 @@ def _validated_scope(scope: str) -> str:
     normalized = scope.strip().lower()
     if normalized not in {"global", "operator", "clients", "jobs"}:
         raise ValueError(f"Unsupported memory scope: {scope}")
+    return normalized
+
+
+def _validated_suggestion_action(action: str) -> str:
+    normalized = action.strip().lower()
+    if normalized not in {"upsert_document", "record_note"}:
+        raise ValueError(f"Unsupported memory suggestion action: {action}")
+    return normalized
+
+
+def _validated_suggestion_status(status: str) -> str:
+    normalized = status.strip().lower()
+    if normalized not in {"pending", "accepted", "rejected"}:
+        raise ValueError(f"Unsupported memory suggestion status: {status}")
     return normalized

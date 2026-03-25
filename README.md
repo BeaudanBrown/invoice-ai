@@ -190,12 +190,20 @@ The current memory layer lives under `src/invoice_ai/memory/` and exposes:
 - `memory.get_document`
 - `memory.upsert_document`
 - `memory.record_note`
+- `memory.list_suggestions`
+- `memory.get_suggestion`
+- `memory.suggest_update`
+- `memory.accept_suggestion`
+- `memory.reject_suggestion`
 
 That layer:
 
 - stores operator/client/job/global guidance as markdown under the configured memory directory
 - supports explicit create/update/read flows for memory documents
 - is the same store the planner consults for memory-aware routing
+- stores pending memory suggestions under the same persistent memory tree
+- returns memory suggestions as review-gated proposals before markdown memory is changed
+- only mutates durable markdown memory when a suggestion is explicitly accepted
 
 ## Current Service Surface
 

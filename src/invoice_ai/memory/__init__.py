@@ -1,4 +1,4 @@
-from .store import MemoryStore
+from .store import MemoryDocument, MemoryStore, MemorySuggestion
 from .tools import MemoryToolExecutor
 
-__all__ = ["MemoryStore", "MemoryToolExecutor"]
+__all__ = ["MemoryDocument", "MemoryStore", "MemorySuggestion", "MemoryToolExecutor"]

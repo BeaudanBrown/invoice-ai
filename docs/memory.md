@@ -69,7 +69,7 @@ Examples:
 - do not mirror structured ERP data into memory files just for convenience
 - prefer concise, high-signal notes over verbose transcripts
 - treat memory as operator-guidance context, not accounting truth
-- memory updates are non-destructive and can be agent-managed
+- memory updates should be proposed first and only applied after explicit review
 
 ## Tool Surface
 
@@ -79,5 +79,21 @@ The first explicit memory tools now live under `src/invoice_ai/memory/`:
 - `memory.get_document`
 - `memory.upsert_document`
 - `memory.record_note`
+- `memory.list_suggestions`
+- `memory.get_suggestion`
+- `memory.suggest_update`
+- `memory.accept_suggestion`
+- `memory.reject_suggestion`
 
 These tools are intended to keep memory management explicit and auditable while reusing the same markdown store the planner reads.
+
+## Suggestion Workflow
+
+Memory suggestions should be review-gated by default:
+
+1. the system proposes a structured memory suggestion
+2. the suggestion is persisted separately from durable markdown memory
+3. the operator reviews and accepts or rejects it
+4. only accepted suggestions are written into the markdown memory store
+
+The first implementation stores suggestions alongside memory under the persistent application state tree and reuses the general approval artifact flow so suggestion proposals can be inspected with the same review tooling as other gated actions.
