@@ -177,10 +177,12 @@ That layer:
 - can directly execute that plan through `orchestrator.handle_request`
 - consults markdown memory from the configured memory directory
 - can optionally use the configured local Ollama endpoint when `defaults.planner.use_model_assist` is enabled
+- can surface review-gated memory suggestions from explicit conversational instructions
 - currently supports narrow planning for:
   - supplier document intake
   - quote drafting
   - quote revision
+  - memory suggestion review turns
 
 ## Current Memory Surface
 
@@ -198,7 +200,7 @@ The current memory layer lives under `src/invoice_ai/memory/` and exposes:
 
 That layer:
 
-- stores operator/client/job/global guidance as markdown under the configured memory directory
+- stores operator/client/job/supplier/global guidance as markdown under the configured memory directory
 - supports explicit create/update/read flows for memory documents
 - is the same store the planner consults for memory-aware routing
 - stores pending memory suggestions under the same persistent memory tree

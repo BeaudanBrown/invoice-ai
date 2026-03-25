@@ -89,7 +89,13 @@ class MemoryStore:
         }
 
     def list_documents(self, *, scope: str | None = None) -> list[MemoryDocument]:
-        scopes = [scope] if scope is not None else ["global", "operator", "clients", "jobs"]
+        scopes = [scope] if scope is not None else [
+            "global",
+            "operator",
+            "clients",
+            "jobs",
+            "suppliers",
+        ]
         documents: list[MemoryDocument] = []
         for scope_name in scopes:
             documents.extend(self._documents_in_scope(scope_name))
@@ -331,11 +337,19 @@ class MemoryStore:
             quote_defaults.get("job"),
             active_quote.get("job"),
         ]
+        supplier_candidates = [
+            selectors.get("supplier"),
+            conversation_context.get("supplier"),
+        ]
 
         client_documents = self._documents_for_scope_and_candidates("clients", client_candidates)
         job_documents = self._documents_for_scope_and_candidates("jobs", job_candidates)
+        supplier_documents = self._documents_for_scope_and_candidates(
+            "suppliers", supplier_candidates
+        )
         selected.extend(client_documents)
         selected.extend(job_documents)
+        selected.extend(supplier_documents)
 
         deduped: list[MemoryDocument] = []
         seen: set[str] = set()
@@ -528,6 +542,8 @@ class MemoryStore:
                 memory_defaults.setdefault("client", metadata.get("subject") or document.slug)
             if document.scope == "jobs":
                 memory_defaults.setdefault("job", metadata.get("subject") or document.slug)
+            if document.scope == "suppliers":
+                memory_defaults.setdefault("supplier", metadata.get("subject") or document.slug)
 
         if quote_defaults:
             merged["quote"] = quote_defaults
@@ -620,7 +636,7 @@ def _render_frontmatter_value(value: Any) -> str:
 
 def _validated_scope(scope: str) -> str:
     normalized = scope.strip().lower()
-    if normalized not in {"global", "operator", "clients", "jobs"}:
+    if normalized not in {"global", "operator", "clients", "jobs", "suppliers"}:
         raise ValueError(f"Unsupported memory scope: {scope}")
     return normalized
 

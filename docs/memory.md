@@ -64,6 +64,14 @@ Examples:
 - recurring wording or scope patterns
 - approval or quoting preferences tied to a job type
 
+### Supplier Memory
+
+Examples:
+
+- recurring supplier naming quirks
+- invoice formatting or labeling habits that help ingestion review
+- known exceptions that matter for future purchase-invoice normalization
+
 ## Guardrails
 
 - do not mirror structured ERP data into memory files just for convenience
@@ -97,3 +105,9 @@ Memory suggestions should be review-gated by default:
 4. only accepted suggestions are written into the markdown memory store
 
 The first implementation stores suggestions alongside memory under the persistent application state tree and reuses the general approval artifact flow so suggestion proposals can be inspected with the same review tooling as other gated actions.
+
+The planner can now also surface these suggestions from explicit operator turns, including:
+
+- pure conversational memory capture such as `remember client Acme prefers itemized materials`
+- quote drafting or revision turns that include a durable instruction
+- supplier intake turns that include a review note worth retaining for later ingestion

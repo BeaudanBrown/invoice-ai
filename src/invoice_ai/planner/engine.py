@@ -8,6 +8,7 @@ from ..memory.store import MemoryStore
 from .models import PlannerTurn
 from .ollama import OllamaPlannerAssistant, PlannerOllamaError
 from .parser import PlannerParseError, plan_operator_request
+from .suggestions import infer_memory_suggestions
 
 
 @dataclass(frozen=True)
@@ -15,6 +16,7 @@ class PlannerOutcome:
     operator_request: dict[str, Any]
     planning_source: str
     memory_context: dict[str, Any]
+    memory_suggestions: tuple[dict[str, Any], ...] = field(default_factory=tuple)
     warnings: tuple[str, ...] = field(default_factory=tuple)
     model_details: dict[str, Any] = field(default_factory=dict)
 
@@ -63,6 +65,13 @@ class PlannerEngine:
                     operator_request=operator_request,
                     planning_source="model_assist",
                     memory_context=memory_context,
+                    memory_suggestions=tuple(
+                        suggestion.as_dict()
+                        for suggestion in infer_memory_suggestions(
+                            turn=memory_enriched_turn,
+                            operator_request=operator_request,
+                        )
+                    ),
                     warnings=tuple(warnings),
                     model_details={"model": str(model_name), "provider": "ollama"},
                 )
@@ -76,6 +85,13 @@ class PlannerEngine:
             operator_request=operator_request,
             planning_source="heuristic",
             memory_context=memory_context,
+            memory_suggestions=tuple(
+                suggestion.as_dict()
+                for suggestion in infer_memory_suggestions(
+                    turn=memory_enriched_turn,
+                    operator_request=operator_request,
+                )
+            ),
             warnings=tuple(warnings),
             model_details={},
         )

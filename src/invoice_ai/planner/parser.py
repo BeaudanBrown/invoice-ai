@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from .models import PlannerAttachment, PlannerTurn
+from .suggestions import is_memory_only_turn
 
 
 class PlannerParseError(ValueError):
@@ -11,6 +12,12 @@ class PlannerParseError(ValueError):
 
 
 def plan_operator_request(turn: PlannerTurn) -> dict[str, Any]:
+    if is_memory_only_turn(turn.message):
+        return {
+            "request_kind": "memory_suggestion",
+            "message": turn.message,
+        }
+
     if _has_supplier_attachment(turn.attachments):
         return {
             "request_kind": "supplier_document_intake",
