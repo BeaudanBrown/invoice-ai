@@ -17,10 +17,7 @@ from .models import OperatorRequest
 class OrchestratorToolExecutor:
     def __init__(self, *, config: RuntimeConfig) -> None:
         self.config = config
-        self.ingest = IngestToolExecutor.from_runtime_config(config)
-        self.invoices = InvoiceToolExecutor.from_runtime_config(config)
-        self.memory = MemoryToolExecutor.from_runtime_config(config)
-        self.quotes = QuoteToolExecutor.from_runtime_config(config)
+        self._executors: dict[str, object] = {}
 
     @classmethod
     def from_runtime_config(cls, config: RuntimeConfig) -> "OrchestratorToolExecutor":
@@ -119,14 +116,21 @@ class OrchestratorToolExecutor:
 
     def _executor_for(self, tool_name: str) -> object:
         if tool_name.startswith("ingest."):
-            return self.ingest
+            return self._executor("ingest", IngestToolExecutor)
         if tool_name.startswith("invoices."):
-            return self.invoices
+            return self._executor("invoices", InvoiceToolExecutor)
         if tool_name.startswith("memory."):
-            return self.memory
+            return self._executor("memory", MemoryToolExecutor)
         if tool_name.startswith("quotes."):
-            return self.quotes
+            return self._executor("quotes", QuoteToolExecutor)
         raise ValueError(f"Unsupported orchestrator delegate: {tool_name}")
+
+    def _executor(self, key: str, executor_type: type[object]) -> object:
+        executor = self._executors.get(key)
+        if executor is None:
+            executor = executor_type.from_runtime_config(self.config)
+            self._executors[key] = executor
+        return executor
 
 
 def _stage_for(request_kind: str, response: ToolResponse) -> str:

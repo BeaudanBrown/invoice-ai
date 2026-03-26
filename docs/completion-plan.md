@@ -135,6 +135,13 @@ Acceptance:
 - the repo can be imported cleanly as a NixOS module in `nix-dotfiles`
 - the service can be stood up with realistic dependencies and verified end to end
 
+Current progress:
+
+- a disposable mock-backed dev stack now exists through `nix run . -- dev-stack`
+- a one-command mock-backed smoke path now exists through `nix run . -- dev-smoke-test`
+- the local CLI/operator dev path no longer requires pre-running `init-paths` or setting `INVOICE_AI_ERPNEXT_URL` for review-only flows
+- remaining work in this stage is host integration, retention/cleanup behavior, and proving the same flows against a more realistic dependency stack than the current mocks
+
 ## Prioritization
 
 The recommended order is:

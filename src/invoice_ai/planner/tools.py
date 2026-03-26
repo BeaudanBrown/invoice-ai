@@ -16,9 +16,9 @@ class PlannerToolExecutor:
     def __init__(self, *, config: RuntimeConfig) -> None:
         self.config = config
         self.approvals = ApprovalStore(config.paths.approvals_dir)
-        self.orchestrator = OrchestratorToolExecutor.from_runtime_config(config)
-        self.memory = MemoryToolExecutor.from_runtime_config(config)
         self.engine = PlannerEngine(config=config)
+        self._memory: MemoryToolExecutor | None = None
+        self._orchestrator: OrchestratorToolExecutor | None = None
 
     @classmethod
     def from_runtime_config(cls, config: RuntimeConfig) -> "PlannerToolExecutor":
@@ -234,6 +234,18 @@ class PlannerToolExecutor:
                 review["approval_dir"] = str(approval_dir)
             reviews.append(review)
         return reviews
+
+    @property
+    def memory(self) -> MemoryToolExecutor:
+        if self._memory is None:
+            self._memory = MemoryToolExecutor.from_runtime_config(self.config)
+        return self._memory
+
+    @property
+    def orchestrator(self) -> OrchestratorToolExecutor:
+        if self._orchestrator is None:
+            self._orchestrator = OrchestratorToolExecutor.from_runtime_config(self.config)
+        return self._orchestrator
 
 
 def _approval_from_dict(payload: dict[str, object]):

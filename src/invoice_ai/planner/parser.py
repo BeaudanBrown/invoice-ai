@@ -154,7 +154,9 @@ def _supplier_payload(turn: PlannerTurn) -> dict[str, Any]:
         if attachment.kind not in {"supplier_invoice", "document", "invoice_document"}:
             continue
         payload = dict(attachment.payload)
-        if "document_path" in payload or "raw_text" in payload:
+        if "document_path" in payload and "source_path" not in payload:
+            payload["source_path"] = payload.pop("document_path")
+        if "source_path" in payload or "raw_text" in payload:
             return payload
     raise PlannerParseError(
         "Supplier document intake requires an attachment with document_path or raw_text"

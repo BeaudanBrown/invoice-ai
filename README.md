@@ -173,7 +173,7 @@ The current weak points are:
 - extraction quality is still narrower than it needs to be for repeated real use, even though anomalies, duplicate checks, and record reprocessing now exist
 - operator auth is currently bearer-token-file based only; there is no richer role or policy model yet
 - the current review-action path is still memory-backed; non-memory approval types have not yet been converged onto the same operator contract
-- no disposable integration stack or broad end-to-end test suite yet
+- no real ERPNext-backed disposable integration stack yet; the current disposable path is mock-backed
 - no actual `nix-dotfiles` deployment integration yet
 
 ## Current Service Surface
@@ -217,54 +217,41 @@ The operator token file is JSON and currently has this shape:
 
 ## Fastest Local Test Loop
 
-There is not yet a one-command disposable integration stack. The fastest current user-level dev loop is:
+There is now a one-command disposable local dev stack for mock-backed end-to-end testing.
 
-1. run against a temp state dir
-2. point `invoice-ai` at a tiny mock ERP HTTP server
-3. seed an operator token file
-4. call the FastAPI surface with fake data
-
-The minimum setup looks like:
+Fastest commands:
 
 ```bash
-tmp="$(mktemp -d)"
-cat >"$tmp/operators.json" <<'EOF'
-{
-  "operators": [
-    { "operator_id": "local-dev", "token": "dev-token" }
-  ]
-}
-EOF
+nix run . -- dev-stack
+nix run . -- dev-smoke-test
 ```
 
-Then run `invoice-ai` with a temp state dir and that operator file:
+`dev-stack` starts:
 
-```bash
-export INVOICE_AI_STATE_DIR="$tmp/state"
-export INVOICE_AI_OPERATOR_TOKENS_FILE="$tmp/operators.json"
-export INVOICE_AI_OLLAMA_URL="http://127.0.0.1:11434"
-nix run . -- serve-http
-```
+1. a disposable `invoice-ai` FastAPI service
+2. a seeded mock ERPNext HTTP backend
+3. a seeded mock Docling HTTP backend
+4. a temp state tree plus local operator token file
 
-At that point you can hit the authenticated runtime and tool routes with:
+It prints the service URL, bearer token, temp-state paths, and sample supplier document path, then stays up for manual interaction until `Ctrl-C`.
 
-```bash
-curl -s \
-  -H 'Authorization: Bearer dev-token' \
-  http://127.0.0.1:4310/api/runtime
-```
+`dev-smoke-test` uses that same stack shape and verifies:
 
-and then drive a fake quote or invoice request with `POST /api/tools/run`.
+- authenticated operator API startup
+- quote drafting through the planner/orchestrator path
+- quote-to-invoice drafting through the planner/orchestrator path
+- supplier document intake through extraction, ingest, and draft purchase-invoice creation
 
-Today, the fake-data path is real but still manual:
+The current fake-data story is now:
 
 - blank local state: yes
 - fake operator auth: yes
-- fake ERP backend: yes, by pointing `INVOICE_AI_ERPNEXT_URL` at a mock server
-- fake documents/text ingestion: yes
-- one-command disposable ERPNext stack: no, not yet
+- fake ERP backend: yes, built in
+- fake Docling backend: yes, built in
+- one-command disposable smoke path: yes
+- real disposable ERPNext fixture: no, not yet
 
-The current gap is not the control plane. The missing piece is a first-class disposable ERP/dev fixture. That should be added during the end-to-end verification lane.
+The remaining gap is not whether the control plane can be exercised locally. The remaining gap is proving the same loop against a more realistic ERPNext dependency and then carrying that integration cleanly into `nix-dotfiles`.
 
 ## Direction
 

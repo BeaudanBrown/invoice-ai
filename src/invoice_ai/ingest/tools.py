@@ -468,12 +468,14 @@ class IngestToolExecutor:
         payload: dict[str, Any] | None,
         dry_run: bool | None = None,
     ) -> dict[str, Any]:
+        sanitized_payload = dict(payload or {})
+        sanitized_payload.pop("source_ref", None)
         return {
             "request_id": request.request_id,
             "tool_name": "erp.create_draft_purchase_invoice",
             "dry_run": request.dry_run if dry_run is None else dry_run,
             "conversation_context": request.conversation_context,
-            "payload": payload or {},
+            "payload": sanitized_payload,
         }
 
     def _duplicate_response(

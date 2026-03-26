@@ -188,3 +188,35 @@ Verification:
 Follow-up issue:
 
 - `coordinator-2xm`: remove unnecessary runtime assumptions from local review/dev flows
+
+Completed `coordinator-2xm` on 2026-03-26.
+
+Highlights:
+
+- `run-tool` now auto-initializes the runtime directories and SQLite control-plane store
+- review-only planner/orchestrator turns no longer require `INVOICE_AI_ERPNEXT_URL`
+- orchestrator/planner delegate construction is now lazy instead of eagerly instantiating ERP-backed executors
+
+Verification:
+
+- `INVOICE_AI_STATE_DIR=$(mktemp -d)/state nix run . -- run-tool --request-file <review-only planner request>`
+- confirmed review-only planner/orchestrator flow succeeds without `init-paths`
+- confirmed review-only planner/orchestrator flow succeeds without `INVOICE_AI_ERPNEXT_URL`
+
+Completed the first `coordinator-jdv.5` slice on 2026-03-26.
+
+Highlights:
+
+- added a disposable mock ERPNext backend under `src/invoice_ai/dev/mock_services.py`
+- added a disposable mock Docling backend under `src/invoice_ai/dev/mock_services.py`
+- added `dev-stack` for an interactive local operator stack
+- added `dev-smoke-test` for a one-command mock-backed end-to-end verification path
+- seeded the local dev stack with fake customer/item/supplier data and a sample supplier invoice document
+
+Verification:
+
+- `nix run . -- dev-smoke-test`
+  - confirmed authenticated operator API startup
+  - confirmed quote drafting through planner/orchestrator
+  - confirmed quote-to-invoice conversion through planner/orchestrator
+  - confirmed supplier document intake through extraction, ingest, and draft purchase-invoice creation

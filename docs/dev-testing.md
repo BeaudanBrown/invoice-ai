@@ -1,46 +1,37 @@
 # Dev Testing
 
-`invoice-ai` does not yet ship a one-command disposable dependency stack.
+`invoice-ai` now ships a one-command disposable mock-backed dependency stack for local end-to-end testing.
 
-The fastest current local loop is:
+The fastest local loops are:
 
-1. run the control plane against a temporary state directory
-2. seed a local operator token file
-3. point `INVOICE_AI_ERPNEXT_URL` at a mock ERP HTTP server
-4. optionally point `INVOICE_AI_DOCLING_URL` at a mock Docling service
-5. hit the FastAPI surface with fake data
+1. `nix run . -- dev-stack`
+2. `nix run . -- dev-smoke-test`
 
-## Minimal Operator Auth
+## Disposable Dev Stack
 
-Create a temporary token file:
+Run:
 
 ```bash
-tmp="$(mktemp -d)"
-cat >"$tmp/operators.json" <<'EOF'
-{
-  "operators": [
-    { "operator_id": "local-dev", "token": "dev-token" }
-  ]
-}
-EOF
+nix run . -- dev-stack
 ```
 
-## Temporary Runtime
+This starts:
 
-Run the service with local-only state:
+- a disposable `invoice-ai` FastAPI service
+- a seeded mock ERPNext HTTP backend
+- a seeded mock Docling HTTP backend
+- a temp runtime state tree
+- a temp operator token file
 
-```bash
-export INVOICE_AI_STATE_DIR="$tmp/state"
-export INVOICE_AI_OPERATOR_TOKENS_FILE="$tmp/operators.json"
-export INVOICE_AI_ERPNEXT_URL="http://127.0.0.1:9999"
-nix run . -- serve-http
-```
+The command prints JSON that includes:
 
-The dummy `INVOICE_AI_ERPNEXT_URL` is currently needed even for review-only planner/orchestrator flows because executor construction is still broader than it should be. That is tracked as follow-up issue `coordinator-2xm`.
+- `service_url`
+- `operator_token`
+- `operators_file`
+- `state_dir`
+- `sample_supplier_invoice_pdf`
 
-## Fastest Smoke Test
-
-Confirm the authenticated operator API is up:
+Leave it running, then in another shell:
 
 ```bash
 curl -s \
@@ -48,7 +39,50 @@ curl -s \
   http://127.0.0.1:4310/api/runtime
 ```
 
-Run a planner or tool request:
+You can then drive planner/orchestrator flows over HTTP with fake data.
+
+## One-Command Smoke Test
+
+Run:
+
+```bash
+nix run . -- dev-smoke-test
+```
+
+This verifies the current mock-backed end-to-end path:
+
+- authenticated operator API startup
+- quote drafting
+- quote-to-invoice draft conversion
+- supplier document intake through extraction, normalization, and draft purchase-invoice creation
+
+The command returns a JSON summary including the generated ERP refs and temp-state paths.
+
+## Manual Review-Only CLI Loop
+
+The CLI path now auto-initializes the runtime store. A blank temp state directory is enough even for review-only planner/orchestrator turns:
+
+```bash
+tmp="$(mktemp -d)"
+cat >"$tmp/request.json" <<'EOF'
+{
+  "request_id": "review-turn-1",
+  "tool_name": "planner.handle_turn",
+  "payload": {
+    "message": "show pending reviews"
+  }
+}
+EOF
+
+INVOICE_AI_STATE_DIR="$tmp/state" \
+  nix run . -- run-tool --request-file "$tmp/request.json"
+```
+
+`INVOICE_AI_ERPNEXT_URL` is no longer required for that review-only path.
+
+## Manual HTTP Quote Request
+
+If you prefer to drive a specific operator turn manually against the dev stack:
 
 ```bash
 curl -s \
@@ -82,13 +116,17 @@ What exists today:
 - blank local control-plane state
 - local bearer-token auth
 - fake quote/invoice/supplier inputs
-- mock ERP and Docling endpoints by configuration
+- checked-in disposable mock ERP and Docling endpoints
+- one-command local smoke verification
 
 What does not exist yet:
 
-- a checked-in disposable ERPNext fixture
-- a checked-in disposable Docling fixture
-- a one-command end-to-end dev stack
-- broad integration tests over that stack
+- a disposable real ERPNext fixture
+- a Nix-owned dependency stack that runs real ERPNext and Docling together
+- broad integration tests over a real dependency environment
 
-That missing disposable stack belongs in the deployment and verification lane, not in the current control-plane runtime itself.
+The remaining e2e work belongs in the deployment and verification lane:
+
+- integrate the module into `nix-dotfiles`
+- add retention and cleanup behavior for the runtime tree
+- prove the operator path against a more realistic ERPNext dependency

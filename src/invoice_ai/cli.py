@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 import sys
 
 from pydantic import ValidationError
@@ -11,6 +12,7 @@ from .artifacts.pdf import QuotePreviewRenderer
 from .config import RuntimeConfig
 from .control_plane.models import RequestSource
 from .control_plane.store import ControlPlaneStore
+from .dev.stack import run_dev_smoke_test, serve_dev_stack
 from .erp.schemas import ToolRequest
 from .execution import execute_tool_request
 from .service.http import serve_http
@@ -68,6 +70,40 @@ def build_parser() -> argparse.ArgumentParser:
     )
     serve_http.set_defaults(handler=handle_serve_http)
 
+    dev_stack = subparsers.add_parser(
+        "dev-stack",
+        help="Run a disposable local dev stack with mock ERPNext and Docling services.",
+    )
+    dev_stack.add_argument(
+        "--root",
+        default=None,
+        help="Optional root directory for the disposable dev stack.",
+    )
+    dev_stack.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help="Optional port for the invoice-ai service inside the dev stack.",
+    )
+    dev_stack.set_defaults(handler=handle_dev_stack)
+
+    dev_smoke = subparsers.add_parser(
+        "dev-smoke-test",
+        help="Run a disposable end-to-end smoke test against the local dev stack.",
+    )
+    dev_smoke.add_argument(
+        "--root",
+        default=None,
+        help="Optional root directory for the disposable smoke-test state.",
+    )
+    dev_smoke.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help="Optional port for the invoice-ai service inside the smoke-test stack.",
+    )
+    dev_smoke.set_defaults(handler=handle_dev_smoke_test)
+
     return parser
 
 
@@ -92,6 +128,8 @@ def handle_run_tool(args: argparse.Namespace) -> int:
     except ValidationError as exc:
         raise ValueError(str(exc)) from exc
     config = RuntimeConfig.from_env()
+    config.paths.ensure()
+    ControlPlaneStore.from_runtime_config(config).ensure()
     response = execute_tool_request(
         config=config,
         request=request,
@@ -138,6 +176,18 @@ def handle_serve_http(_args: argparse.Namespace) -> int:
         flush=True,
     )
     serve_http(config)
+    return 0
+
+
+def handle_dev_stack(args: argparse.Namespace) -> int:
+    root = None if args.root is None else Path(args.root)
+    return serve_dev_stack(root=root, service_port=args.port)
+
+
+def handle_dev_smoke_test(args: argparse.Namespace) -> int:
+    root = None if args.root is None else Path(args.root)
+    result = run_dev_smoke_test(root=root, service_port=args.port)
+    print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
 

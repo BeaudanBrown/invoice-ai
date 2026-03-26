@@ -46,6 +46,7 @@ def execute_tool_request(
     operator_id: str | None = None,
 ) -> ToolResponse:
     control_plane = ControlPlaneStore.from_runtime_config(config)
+    control_plane.ensure()
     control_plane.record_request_start(
         request=request,
         source=source,
