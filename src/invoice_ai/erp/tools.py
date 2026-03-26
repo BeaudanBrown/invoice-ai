@@ -11,10 +11,12 @@ from .commands import (
     AttachFileCommand,
     CreateDraftPurchaseInvoiceCommand,
     CreateDraftQuotationCommand,
+    CreateDraftSalesInvoiceCommand,
     GetDocCommand,
     LinkedContextCommand,
     ListDocsCommand,
     PricingContextCommand,
+    UpdateDraftSalesInvoiceCommand,
     UpdateDraftQuotationCommand,
 )
 from .schemas import (
@@ -44,6 +46,8 @@ class ERPToolExecutor:
             "erp.get_pricing_context": self.get_pricing_context,
             "erp.create_draft_quotation": self.create_draft_quotation,
             "erp.update_draft_quotation": self.update_draft_quotation,
+            "erp.create_draft_sales_invoice": self.create_draft_sales_invoice,
+            "erp.update_draft_sales_invoice": self.update_draft_sales_invoice,
             "erp.create_draft_purchase_invoice": self.create_draft_purchase_invoice,
             "erp.attach_file": self.attach_file,
         }
@@ -239,6 +243,77 @@ class ERPToolExecutor:
             },
         )
 
+    def create_draft_sales_invoice(self, request: ToolRequest) -> ToolResponse:
+        command = CreateDraftSalesInvoiceCommand.model_validate(request.payload)
+        customer = command.customer
+        if not customer:
+            return self._approval_required(
+                request,
+                action="create_customer",
+                summary="Resolve or create a customer before drafting the sales invoice",
+                target={"doctype": "Customer", "name": None},
+                proposed_changes={},
+                warnings=["Customer match is required for direct ERP write"],
+            )
+
+        doc = self._sales_invoice_payload(command)
+        if request.dry_run:
+            return self._success(
+                request,
+                {
+                    "doc_ref": {"doctype": "Sales Invoice", "name": None},
+                    "docstatus": 0,
+                },
+                meta={"dry_run": True, "proposed_doc": doc},
+            )
+
+        created = self.client.create_doc("Sales Invoice", doc)
+        return self._success(
+            request,
+            {
+                "doc_ref": {"doctype": "Sales Invoice", "name": created["name"]},
+                "docstatus": created.get("docstatus", 0),
+            },
+        )
+
+    def update_draft_sales_invoice(self, request: ToolRequest) -> ToolResponse:
+        command = UpdateDraftSalesInvoiceCommand.model_validate(request.payload)
+        sales_invoice = command.sales_invoice
+        patch = command.patch
+        existing = self.client.get_doc("Sales Invoice", sales_invoice)
+        if int(existing.get("docstatus", 0)) != 0:
+            return ToolResponse(
+                request_id=request.request_id,
+                tool_name=request.tool_name,
+                status=ToolExecutionStatus.BLOCKED,
+                errors=[
+                    ToolError(
+                        code="erp.non_draft_document",
+                        message=f"Sales Invoice {sales_invoice} is not in draft state",
+                    )
+                ],
+                meta={"retryable": False},
+            )
+
+        updated = self._apply_sales_invoice_patch(existing, patch)
+        if request.dry_run:
+            return self._success(
+                request,
+                {
+                    "doc_ref": {"doctype": "Sales Invoice", "name": sales_invoice},
+                    "docstatus": 0,
+                },
+                meta={"dry_run": True, "proposed_doc": updated},
+            )
+        saved = self.client.update_doc("Sales Invoice", sales_invoice, updated)
+        return self._success(
+            request,
+            {
+                "doc_ref": {"doctype": "Sales Invoice", "name": saved["name"]},
+                "docstatus": saved.get("docstatus", 0),
+            },
+        )
+
     def create_draft_purchase_invoice(self, request: ToolRequest) -> ToolResponse:
         command = CreateDraftPurchaseInvoiceCommand.model_validate(request.payload)
         supplier = command.supplier
@@ -357,7 +432,40 @@ class ERPToolExecutor:
             doc["terms"] = narrative["notes"]
         return doc
 
+    def _sales_invoice_payload(self, command: CreateDraftSalesInvoiceCommand) -> dict[str, Any]:
+        doc = {
+            "customer": command.customer,
+            "company": command.company,
+            "currency": command.currency,
+            "items": command.items,
+        }
+        if command.quotation is not None:
+            doc["quotation"] = command.quotation
+        narrative = command.narrative
+        if "intro" in narrative:
+            doc["remarks"] = narrative["intro"]
+        if "notes" in narrative:
+            doc["terms"] = narrative["notes"]
+        return doc
+
     def _apply_quotation_patch(
+        self, existing: dict[str, Any], patch: dict[str, Any]
+    ) -> dict[str, Any]:
+        updated = dict(existing)
+        items = patch.get("items")
+        if items is not None:
+            replace_items = bool(patch.get("replace_items", False))
+            current_items = [] if replace_items else list(existing.get("items", []))
+            updated["items"] = current_items + list(items)
+
+        notes_append = patch.get("notes_append", [])
+        if notes_append:
+            current_notes = str(existing.get("terms") or "")
+            extra = "\n".join(str(note) for note in notes_append)
+            updated["terms"] = extra if not current_notes else f"{current_notes}\n{extra}"
+        return updated
+
+    def _apply_sales_invoice_patch(
         self, existing: dict[str, Any], patch: dict[str, Any]
     ) -> dict[str, Any]:
         updated = dict(existing)

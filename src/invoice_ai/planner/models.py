@@ -59,3 +59,9 @@ class PlannerTurn(InvoiceAIModel):
         if isinstance(active, dict):
             return dict(active)
         return {}
+
+    def active_invoice(self) -> dict[str, Any]:
+        active = self.conversation_context.get("active_invoice")
+        if isinstance(active, dict):
+            return dict(active)
+        return {}

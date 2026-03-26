@@ -53,6 +53,21 @@ class UpdateDraftQuotationCommand(InvoiceAIModel):
     patch: dict[str, Any] = Field(default_factory=dict)
 
 
+class CreateDraftSalesInvoiceCommand(InvoiceAIModel):
+    customer: str | None = None
+    company: str
+    currency: str
+    items: list[dict[str, Any]] = Field(default_factory=list)
+    narrative: dict[str, str] = Field(default_factory=dict)
+    source_refs: list[dict[str, Any]] = Field(default_factory=list)
+    quotation: str | None = None
+
+
+class UpdateDraftSalesInvoiceCommand(InvoiceAIModel):
+    sales_invoice: str
+    patch: dict[str, Any] = Field(default_factory=dict)
+
+
 class CreateDraftPurchaseInvoiceCommand(InvoiceAIModel):
     supplier: str | None = None
     bill_no: str | None = None

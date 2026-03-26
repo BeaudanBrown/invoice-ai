@@ -20,7 +20,6 @@ Inherited completed work:
 
 - service API is still missing enforced auth and fuller operator review surfaces
 - request/job metadata exists now, but it is not yet exposed through a broader operator API
-- sales invoices are still missing from the ERP semantic and operator layers
 - operator review flows are incomplete
 - extraction confidence and duplicate handling are still basic
 - deployment and verification are still mostly mock-driven
@@ -110,3 +109,23 @@ Verification:
   - `POST /api/tools/run`
   - `GET /openapi.json`
   - control-plane `requests.operator_id` recording from `X-Operator-Id`
+
+Completed `coordinator-jdv.2` on 2026-03-26.
+
+Highlights:
+
+- added the new `src/invoice_ai/invoices/` tool family for draft sales-invoice creation and revision
+- extended the ERP semantic layer with `erp.create_draft_sales_invoice` and `erp.update_draft_sales_invoice`
+- made quote-to-invoice draft creation explicit by letting invoice drafts be grounded in an existing `Quotation`
+- added sales-invoice revision snapshots and preview PDF artifacts
+- extended the orchestrator and planner with `invoice_draft` and `invoice_revision`
+- added planner support for quote-to-invoice turns that reuse `conversation_context.active_quote`
+
+Verification:
+
+- `nix shell .#python -c python -m compileall src`
+- mock-ERP temp-state runs covering:
+  - direct `invoices.create_draft`
+  - `invoices.create_draft` from an existing quotation
+  - `invoices.revise_draft`
+  - `planner.handle_turn` for quote-to-invoice conversion through the orchestrator

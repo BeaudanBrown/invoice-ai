@@ -40,6 +40,20 @@ def plan_operator_request(turn: PlannerTurn) -> dict[str, Any]:
             **_quote_revision_payload(turn),
         }
 
+    if _looks_like_invoice_revision(turn):
+        return {
+            "request_kind": "invoice_revision",
+            "message": turn.message,
+            **_invoice_revision_payload(turn),
+        }
+
+    if _looks_like_invoice_draft(turn):
+        return {
+            "request_kind": "invoice_draft",
+            "message": turn.message,
+            "invoice": _invoice_draft_payload(turn),
+        }
+
     if _looks_like_quote_draft(turn):
         return {
             "request_kind": "quote_draft",
@@ -102,9 +116,11 @@ def _supplier_payload(turn: PlannerTurn) -> dict[str, Any]:
 
 
 def _looks_like_quote_revision(turn: PlannerTurn) -> bool:
+    message = turn.message.lower()
+    if "invoice" in message:
+        return False
     if turn.active_quote():
         return True
-    message = turn.message.lower()
     return any(
         token in message
         for token in ("revise", "update quote", "change quote", "add ", "make it", "split ")
@@ -113,7 +129,28 @@ def _looks_like_quote_revision(turn: PlannerTurn) -> bool:
 
 def _looks_like_quote_draft(turn: PlannerTurn) -> bool:
     message = turn.message.lower()
+    if "invoice" in message:
+        return False
     return "quote" in message or "draft a quote" in message
+
+
+def _looks_like_invoice_revision(turn: PlannerTurn) -> bool:
+    if turn.active_invoice():
+        return True
+    message = turn.message.lower()
+    return any(
+        token in message
+        for token in ("revise invoice", "update invoice", "change invoice", "add to invoice")
+    )
+
+
+def _looks_like_invoice_draft(turn: PlannerTurn) -> bool:
+    message = turn.message.lower()
+    return (
+        "invoice" in message
+        or "draft an invoice" in message
+        or "bill " in message
+    ) and "supplier invoice" not in message
 
 
 def _quote_draft_payload(turn: PlannerTurn) -> dict[str, Any]:
@@ -162,10 +199,89 @@ def _quote_revision_payload(turn: PlannerTurn) -> dict[str, Any]:
     return payload
 
 
+def _invoice_draft_payload(turn: PlannerTurn) -> dict[str, Any]:
+    invoice_defaults = dict(turn.defaults.get("invoice", {}))
+    quote_defaults = dict(turn.defaults.get("quote", {}))
+    company = invoice_defaults.get("company") or quote_defaults.get("company")
+    if not company:
+        raise PlannerParseError("Sales invoice drafting requires defaults.invoice.company")
+
+    quotation = _extract_quotation_reference(turn.message)
+    if quotation is None:
+        active_quote = turn.active_quote()
+        if active_quote.get("quotation") is not None:
+            quotation = str(active_quote["quotation"])
+    customer = _extract_customer_from_invoice(turn.message)
+    configured_customer = invoice_defaults.get("customer") or quote_defaults.get("customer")
+    if quotation is None and customer is None and configured_customer is None:
+        raise PlannerParseError(
+            "Sales invoice drafting requires an identifiable customer or quotation"
+        )
+
+    line_items = []
+    if quotation is None:
+        line_items = _extract_quote_line_items(turn.message, {**quote_defaults, **invoice_defaults})
+        if not line_items:
+            raise PlannerParseError(
+                "Sales invoice drafting requires at least one inferred line item when not invoicing from a quotation"
+            )
+
+    return {
+        "draft_key": str(invoice_defaults.get("draft_key") or turn.request_id),
+        "quotation": quotation,
+        "customer": configured_customer or customer,
+        "customer_name": invoice_defaults.get("customer_name") or quote_defaults.get("customer_name") or customer,
+        "company": company,
+        "currency": str(invoice_defaults.get("currency") or quote_defaults.get("currency") or "AUD"),
+        "narrative": {
+            "intro": str(invoice_defaults.get("intro") or "Sales Invoice Draft"),
+            "notes": str(invoice_defaults.get("notes") or ""),
+        },
+        "line_items": line_items,
+    }
+
+
+def _invoice_revision_payload(turn: PlannerTurn) -> dict[str, Any]:
+    active_invoice = turn.active_invoice()
+    patch = _extract_quote_revision_patch(turn.message, turn.defaults)
+    if not patch:
+        raise PlannerParseError("Planner could not infer a safe sales invoice revision patch")
+
+    payload: dict[str, Any] = {
+        "patch": patch,
+        "summary": _revision_summary(turn.message),
+    }
+    if active_invoice.get("draft_key") is not None:
+        payload["draft_key"] = active_invoice["draft_key"]
+    if active_invoice.get("sales_invoice") is not None:
+        payload["sales_invoice"] = active_invoice["sales_invoice"]
+    return payload
+
+
 def _extract_customer_from_quote(message: str) -> str | None:
     match = re.search(r"\bquote\s+(.+?)\s+for\b", message, flags=re.IGNORECASE)
     if match:
         return match.group(1).strip()
+    return None
+
+
+def _extract_customer_from_invoice(message: str) -> str | None:
+    invoice_match = re.search(r"\binvoice\s+(.+?)\s+for\b", message, flags=re.IGNORECASE)
+    if invoice_match:
+        return invoice_match.group(1).strip()
+    bill_match = re.search(r"\bbill\s+(.+?)\s+for\b", message, flags=re.IGNORECASE)
+    if bill_match:
+        return bill_match.group(1).strip()
+    return None
+
+
+def _extract_quotation_reference(message: str) -> str | None:
+    match = re.search(r"\bquote(?:\s+|:)([A-Z0-9-]+)\b", message, flags=re.IGNORECASE)
+    if match and any(char.isdigit() for char in match.group(1)):
+        return match.group(1)
+    match = re.search(r"\bquotation(?:\s+|:)([A-Z0-9-]+)\b", message, flags=re.IGNORECASE)
+    if match:
+        return match.group(1)
     return None
 
 

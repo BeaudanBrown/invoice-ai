@@ -10,6 +10,7 @@ from .erp.schemas import ToolExecutionStatus, ToolRequest, ToolResponse
 from .erp.tools import ERPToolExecutor
 from .extract.tools import ExtractToolExecutor
 from .ingest.tools import IngestToolExecutor
+from .invoices.tools import InvoiceToolExecutor
 from .memory.tools import MemoryToolExecutor
 from .orchestrator.tools import OrchestratorToolExecutor
 from .planner.tools import PlannerToolExecutor
@@ -23,6 +24,8 @@ def tool_executor_for(tool_name: str, config: RuntimeConfig) -> object:
         return ERPToolExecutor.from_runtime_config(config)
     if tool_name.startswith("ingest."):
         return IngestToolExecutor.from_runtime_config(config)
+    if tool_name.startswith("invoices."):
+        return InvoiceToolExecutor.from_runtime_config(config)
     if tool_name.startswith("memory."):
         return MemoryToolExecutor.from_runtime_config(config)
     if tool_name.startswith("orchestrator."):
@@ -112,6 +115,8 @@ def execute_tool_request(
         in {
             "erp.create_draft_quotation",
             "erp.update_draft_quotation",
+            "erp.create_draft_sales_invoice",
+            "erp.update_draft_sales_invoice",
             "erp.create_draft_purchase_invoice",
             "erp.attach_file",
         }

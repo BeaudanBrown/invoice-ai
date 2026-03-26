@@ -11,6 +11,8 @@ Nix-native self-hosted AI invoicing workspace.
 - an ERP-first semantic tool layer for `ERPNext`
 - supplier-document extraction and ingest flows
 - quote draft and revision flows
+- sales invoice draft and revision flows
+- quote-to-invoice draft conversion
 - a planner and orchestrator for chat-facing routing
 - markdown memory with review-gated suggestions
 - filesystem-backed approvals, revisions, and PDF preview artifacts
@@ -108,6 +110,15 @@ The quote layer lives under `src/invoice_ai/quotes/` and currently exposes:
 
 It can gather ERP-backed quote context, create draft quotations, revise them, render preview PDFs, and persist local revision snapshots.
 
+### Sales Invoices
+
+The sales-invoice layer lives under `src/invoice_ai/invoices/` and currently exposes:
+
+- `invoices.create_draft`
+- `invoices.revise_draft`
+
+It can create draft `Sales Invoice` records either from direct customer/item input or from an existing `Quotation`, revise draft sales invoices, render preview PDFs, and persist local revision snapshots.
+
 ### Orchestrator
 
 The operator-facing orchestration layer lives under `src/invoice_ai/orchestrator/` and currently exposes:
@@ -120,6 +131,8 @@ It currently supports:
 - `review_queue`
 - `quote_draft`
 - `quote_revision`
+- `invoice_draft`
+- `invoice_revision`
 
 ### Planner
 
@@ -128,7 +141,7 @@ The planner lives under `src/invoice_ai/planner/` and currently exposes:
 - `planner.plan_turn`
 - `planner.handle_turn`
 
-It translates a narrow set of free-form operator turns into structured orchestrator requests and can optionally use `Ollama` for model-assisted routing.
+It translates a narrow set of free-form operator turns into structured orchestrator requests and can optionally use `Ollama` for model-assisted routing. It now supports direct invoice drafting and quote-to-invoice turns in addition to the earlier quote and supplier-ingest paths.
 
 ### Memory
 
@@ -150,7 +163,6 @@ The memory layer lives under `src/invoice_ai/memory/` and currently exposes:
 
 The current weak points are:
 
-- no sales-invoice drafting path yet
 - thin ERP semantic coverage outside the first quote and purchase-invoice slice
 - extraction quality is still narrow and confidence handling is basic
 - auth is not enforced yet even though the service shell is now structured for it
@@ -184,7 +196,7 @@ The FastAPI service also emits `X-Request-ID` on every response and accepts an o
 The immediate project direction is:
 
 1. harden the operator control plane
-2. complete the first missing business paths, especially sales invoices
+2. complete the remaining ERP and review business paths around the new sales-invoice surface
 3. expand ERP semantic coverage and review flows
 4. strengthen extraction, dedupe, and auditability
 5. integrate cleanly into `nix-dotfiles` and add real end-to-end verification

@@ -61,6 +61,12 @@ Acceptance:
 - the agent can create and revise both quotations and sales invoices safely through semantic ERP tools
 - missing master data is proposed consistently instead of improvised ad hoc
 
+Current progress:
+
+- semantic ERP tools now cover draft quotation create/revise, draft sales-invoice create/revise, and draft purchase-invoice creation
+- quote-to-invoice drafting is now explicit through the invoice tool layer and planner/orchestrator surface
+- remaining work in this stage is broader ERP semantics and master-data proposal depth rather than the first sales-invoice vertical slice itself
+
 ## Stage 3: Ingest Hardening
 
 Objective:

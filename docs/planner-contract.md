@@ -14,7 +14,7 @@ It sits above the structured orchestrator contract and below any future richer m
 The planner is responsible for:
 
 - accepting a free-form operator message
-- using current `conversation_context`, especially `active_quote`
+- using current `conversation_context`, especially `active_quote` and `active_invoice`
 - producing a safe structured operator request
 - delegating to `orchestrator.handle_request` when using `planner.handle_turn`
 
@@ -31,6 +31,9 @@ The current planner can map:
 - supplier-document turns with explicit attachments into `supplier_document_intake`
 - quote-creation turns into `quote_draft`
 - quote follow-up turns with `active_quote` into `quote_revision`
+- invoice-creation turns into `invoice_draft`
+- invoice follow-up turns with `active_invoice` into `invoice_revision`
+- quote-to-invoice turns with `active_quote` into `invoice_draft`
 
 The current implementation is intentionally narrow. It now supports:
 
@@ -62,6 +65,26 @@ For follow-up revisions:
 ```json
 {
   "message": "Add a travel line item",
+  "conversation_context": {
+    "active_quote": {
+      "draft_key": "quote-123",
+      "quotation": "QTN-0004"
+    }
+  }
+}
+```
+
+For quote-to-invoice conversion:
+
+```json
+{
+  "message": "Turn this quote into an invoice",
+  "defaults": {
+    "invoice": {
+      "company": "Test Electrical Pty Ltd",
+      "currency": "AUD"
+    }
+  },
   "conversation_context": {
     "active_quote": {
       "draft_key": "quote-123",

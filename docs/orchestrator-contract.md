@@ -11,8 +11,11 @@ The current top-level tool is:
 It accepts a structured operator request envelope with one of these request kinds:
 
 - `supplier_document_intake`
+- `review_queue`
 - `quote_draft`
 - `quote_revision`
+- `invoice_draft`
+- `invoice_revision`
 
 The orchestrator is responsible for:
 
@@ -26,7 +29,7 @@ The orchestrator is not responsible for:
 - duplicating ERPNext business logic
 - mutating ERP state directly without using the semantic tool layer
 
-## Quote Conversation State
+## Conversation State
 
 For quote-related requests, the orchestrator returns:
 
@@ -44,6 +47,22 @@ Follow-up quote edits should reuse that state through:
 - `conversation_context.active_quote`
 
 This lets the chat-planning layer keep draft identity across turns without making the lower-level quote tool guess which draft is being revised.
+
+For invoice-related requests, the orchestrator returns:
+
+- `data.conversation_state.active_invoice`
+
+That state contains:
+
+- `draft_key`
+- `sales_invoice`
+- `source_quotation`
+- `latest_revision_id`
+- `preview_path`
+
+Follow-up invoice edits should reuse that state through:
+
+- `conversation_context.active_invoice`
 
 ## Transition To Chat Planning
 
@@ -77,6 +96,21 @@ That means free-form chat should eventually terminate in envelopes like:
 }
 ```
 
+or:
+
+```json
+{
+  "request_kind": "invoice_draft",
+  "message": "Turn this quote into an invoice",
+  "invoice": {
+    "draft_key": "invoice-123",
+    "quotation": "QTN-0004",
+    "company": "Test Electrical Pty Ltd",
+    "currency": "AUD"
+  }
+}
+```
+
 while the planner reuses:
 
 ```json
@@ -95,13 +129,4 @@ while the planner reuses:
 As the planner gets smarter, the orchestrator should stay thin.
 
 It should keep normalizing routing, conversation state, and response shape, while the existing delegated tools remain the only code that knows how to create or revise ERP-backed drafts.
-## Supported Request Kinds
-
-The orchestrator currently accepts these operator request kinds:
-
-- `supplier_document_intake`
-- `review_queue`
-- `quote_draft`
-- `quote_revision`
-
 `review_queue` currently delegates to `memory.list_reviews`, which lets the main operator-facing surface answer pending memory-review questions without exposing the lower-level memory tool family directly.

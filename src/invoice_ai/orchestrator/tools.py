@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from ..config import RuntimeConfig
 from ..erp.schemas import ToolRequest, ToolResponse
 from ..ingest.tools import IngestToolExecutor
+from ..invoices.tools import InvoiceToolExecutor
 from ..memory.tools import MemoryToolExecutor
 from ..quotes.tools import QuoteToolExecutor
 from .contract import conversation_state_for, next_request_contract
@@ -17,6 +18,7 @@ class OrchestratorToolExecutor:
     def __init__(self, *, config: RuntimeConfig) -> None:
         self.config = config
         self.ingest = IngestToolExecutor.from_runtime_config(config)
+        self.invoices = InvoiceToolExecutor.from_runtime_config(config)
         self.memory = MemoryToolExecutor.from_runtime_config(config)
         self.quotes = QuoteToolExecutor.from_runtime_config(config)
 
@@ -118,6 +120,8 @@ class OrchestratorToolExecutor:
     def _executor_for(self, tool_name: str) -> object:
         if tool_name.startswith("ingest."):
             return self.ingest
+        if tool_name.startswith("invoices."):
+            return self.invoices
         if tool_name.startswith("memory."):
             return self.memory
         if tool_name.startswith("quotes."):
@@ -146,6 +150,20 @@ def _stage_for(request_kind: str, response: ToolResponse) -> str:
             return "quotation_draft_revised"
         return "quote_revision"
 
+    if request_kind == "invoice_revision":
+        if response.status == "success":
+            return "sales_invoice_draft_revised"
+        return "invoice_revision"
+
+    if request_kind == "invoice_draft":
+        if response.status == "success":
+            if response.data.get("source_quotation"):
+                return "sales_invoice_draft_created_from_quotation"
+            return "sales_invoice_draft_created"
+        if response.status == "approval_required":
+            return "sales_invoice_context_review"
+        return "invoice_draft"
+
     if response.status == "success":
         return "quotation_draft_created"
     if response.status == "approval_required":
@@ -164,7 +182,16 @@ def _collect_artifacts(response: ToolResponse) -> list[dict[str, Any]]:
 
     preview_path = _find_preview_path(response.as_dict())
     if preview_path is not None:
-        artifacts.append({"kind": "quote_preview_pdf", "path": preview_path})
+        artifacts.append(
+            {
+                "kind": (
+                    "sales_invoice_preview_pdf"
+                    if response.data.get("sales_invoice") is not None
+                    else "quote_preview_pdf"
+                ),
+                "path": preview_path,
+            }
+        )
 
     ingest_record_dir = response.meta.get("ingest_record_dir")
     if ingest_record_dir:
@@ -241,6 +268,22 @@ def _collect_erp_refs(*, request_kind: str, response: ToolResponse) -> list[dict
             {
                 "doctype": "Quotation",
                 "name": None if data.get("quotation") is None else str(data["quotation"]),
+            }
+        )
+    if request_kind in {"invoice_draft", "invoice_revision"} and "sales_invoice" in data:
+        refs.append(
+            {
+                "doctype": "Sales Invoice",
+                "name": None
+                if data.get("sales_invoice") is None
+                else str(data["sales_invoice"]),
+            }
+        )
+    if request_kind == "invoice_draft" and data.get("source_quotation") is not None:
+        refs.append(
+            {
+                "doctype": "Quotation",
+                "name": str(data["source_quotation"]),
             }
         )
 

@@ -26,6 +26,24 @@ def _looks_like_quote_revision(payload: dict[str, Any]) -> bool:
     return any(key in payload for key in ("quote_revision", "patch", "quotation", "active_quote"))
 
 
+def _looks_like_invoice_request(payload: dict[str, Any]) -> bool:
+    return any(
+        key in payload
+        for key in (
+            "invoice",
+            "sales_invoice",
+            "invoice_from_quote",
+            "invoice_draft",
+        )
+    )
+
+
+def _looks_like_invoice_revision(payload: dict[str, Any]) -> bool:
+    return any(
+        key in payload for key in ("invoice_revision", "sales_invoice", "active_invoice")
+    )
+
+
 def _looks_like_review_queue_request(payload: dict[str, Any]) -> bool:
     return any(
         key in payload
@@ -38,6 +56,8 @@ class OperatorRequestKind(StrEnum):
     REVIEW_QUEUE = "review_queue"
     QUOTE_DRAFT = "quote_draft"
     QUOTE_REVISION = "quote_revision"
+    INVOICE_DRAFT = "invoice_draft"
+    INVOICE_REVISION = "invoice_revision"
 
 
 class OperatorRequest(InvoiceAIModel):
@@ -61,6 +81,10 @@ class OperatorRequest(InvoiceAIModel):
                 request_kind = OperatorRequestKind.SUPPLIER_DOCUMENT_INTAKE
             elif _looks_like_review_queue_request(payload):
                 request_kind = OperatorRequestKind.REVIEW_QUEUE
+            elif _looks_like_invoice_revision(payload):
+                request_kind = OperatorRequestKind.INVOICE_REVISION
+            elif _looks_like_invoice_request(payload):
+                request_kind = OperatorRequestKind.INVOICE_DRAFT
             elif _looks_like_quote_revision(payload):
                 request_kind = OperatorRequestKind.QUOTE_REVISION
             elif _looks_like_quote_request(payload):
@@ -85,6 +109,10 @@ class OperatorRequest(InvoiceAIModel):
             return "ingest.process_supplier_document"
         if self.request_kind == OperatorRequestKind.REVIEW_QUEUE:
             return "memory.list_reviews"
+        if self.request_kind == OperatorRequestKind.INVOICE_REVISION:
+            return "invoices.revise_draft"
+        if self.request_kind == OperatorRequestKind.INVOICE_DRAFT:
+            return "invoices.create_draft"
         if self.request_kind == OperatorRequestKind.QUOTE_REVISION:
             return "quotes.revise_draft"
         return "quotes.create_draft"
@@ -126,6 +154,41 @@ class OperatorRequest(InvoiceAIModel):
                 )
             return payload
 
+        if self.request_kind == OperatorRequestKind.INVOICE_REVISION:
+            nested = self.payload.get("invoice_revision")
+            if isinstance(nested, dict):
+                payload = dict(nested)
+            else:
+                payload = _clean_payload(self.payload)
+
+            active_invoice = self.active_invoice_context()
+            if "draft_key" not in payload and active_invoice.get("draft_key") is not None:
+                payload["draft_key"] = active_invoice["draft_key"]
+            if (
+                "sales_invoice" not in payload
+                and active_invoice.get("sales_invoice") is not None
+            ):
+                payload["sales_invoice"] = active_invoice["sales_invoice"]
+            if "draft_key" not in payload:
+                raise ValueError(
+                    "invoice_revision requires draft_key or conversation_context.active_invoice.draft_key"
+                )
+            return payload
+
+        if self.request_kind == OperatorRequestKind.INVOICE_DRAFT:
+            nested = self.payload.get("invoice")
+            if not isinstance(nested, dict):
+                nested = self.payload.get("invoice_draft")
+            if not isinstance(nested, dict):
+                nested = self.payload.get("invoice_from_quote")
+            if isinstance(nested, dict):
+                payload = dict(nested)
+            else:
+                payload = _clean_payload(self.payload)
+            if "draft_key" not in payload:
+                payload["draft_key"] = self.request_id
+            return payload
+
         nested = self.payload.get("quote")
         if isinstance(nested, dict):
             payload = dict(nested)
@@ -140,6 +203,15 @@ class OperatorRequest(InvoiceAIModel):
         if isinstance(active_quote, dict):
             return dict(active_quote)
         from_context = self.conversation_context.get("active_quote")
+        if isinstance(from_context, dict):
+            return dict(from_context)
+        return {}
+
+    def active_invoice_context(self) -> dict[str, Any]:
+        active_invoice = self.payload.get("active_invoice")
+        if isinstance(active_invoice, dict):
+            return dict(active_invoice)
+        from_context = self.conversation_context.get("active_invoice")
         if isinstance(from_context, dict):
             return dict(from_context)
         return {}
