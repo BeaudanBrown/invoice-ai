@@ -6,18 +6,13 @@ import sys
 
 from pydantic import ValidationError
 
-from .approvals.store import ApprovalStore
 from .artifacts.models import QuotePreview
 from .artifacts.pdf import QuotePreviewRenderer
 from .config import RuntimeConfig
+from .control_plane.models import RequestSource
+from .control_plane.store import ControlPlaneStore
 from .erp.schemas import ToolRequest
-from .erp.tools import ERPToolExecutor
-from .extract.tools import ExtractToolExecutor
-from .ingest.tools import IngestToolExecutor
-from .memory.tools import MemoryToolExecutor
-from .orchestrator.tools import OrchestratorToolExecutor
-from .planner.tools import PlannerToolExecutor
-from .quotes.tools import QuoteToolExecutor
+from .execution import execute_tool_request
 from .service.http import InvoiceAIHTTPServer
 
 
@@ -85,6 +80,7 @@ def handle_show_config(_args: argparse.Namespace) -> int:
 def handle_init_paths(_args: argparse.Namespace) -> int:
     config = RuntimeConfig.from_env()
     config.paths.ensure()
+    ControlPlaneStore.from_runtime_config(config).ensure()
     print(config.to_json_text())
     return 0
 
@@ -96,10 +92,12 @@ def handle_run_tool(args: argparse.Namespace) -> int:
     except ValidationError as exc:
         raise ValueError(str(exc)) from exc
     config = RuntimeConfig.from_env()
-    executor = _tool_executor_for(request.tool_name, config)
-    response = executor.execute(request)
-    if args.write_approval_artifacts and response.approval is not None:
-        ApprovalStore(config.paths.approvals_dir).write(response)
+    response = execute_tool_request(
+        config=config,
+        request=request,
+        source=RequestSource.CLI,
+        write_approval_artifacts=args.write_approval_artifacts,
+    )
     print(response.to_json_text())
     return 0
 
@@ -127,6 +125,7 @@ def handle_render_quote_preview(args: argparse.Namespace) -> int:
 def handle_serve_http(_args: argparse.Namespace) -> int:
     config = RuntimeConfig.from_env()
     config.paths.ensure()
+    ControlPlaneStore.from_runtime_config(config).ensure()
     server = InvoiceAIHTTPServer(config)
     print(
         json.dumps(
@@ -157,24 +156,6 @@ def _read_request_payload(path: str) -> dict[str, object]:
     if not isinstance(payload, dict):
         raise ValueError("Request payload must be a JSON object")
     return payload
-
-
-def _tool_executor_for(tool_name: str, config: RuntimeConfig) -> object:
-    if tool_name.startswith("extract."):
-        return ExtractToolExecutor.from_runtime_config(config)
-    if tool_name.startswith("erp."):
-        return ERPToolExecutor.from_runtime_config(config)
-    if tool_name.startswith("ingest."):
-        return IngestToolExecutor.from_runtime_config(config)
-    if tool_name.startswith("memory."):
-        return MemoryToolExecutor.from_runtime_config(config)
-    if tool_name.startswith("orchestrator."):
-        return OrchestratorToolExecutor.from_runtime_config(config)
-    if tool_name.startswith("planner."):
-        return PlannerToolExecutor.from_runtime_config(config)
-    if tool_name.startswith("quotes."):
-        return QuoteToolExecutor.from_runtime_config(config)
-    raise ValueError(f"Unsupported tool family for {tool_name}")
 
 
 def main(argv: list[str] | None = None) -> int:

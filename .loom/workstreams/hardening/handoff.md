@@ -66,3 +66,24 @@ Use the hardening Beads epic to drive:
 - the current completion roadmap is in `docs/completion-plan.md`
 - the concrete service/store/schema decisions are in `docs/control-plane-hardening.md`
 - the live schema conventions are in `docs/schema-conventions.md`
+
+Completed `coordinator-jdv.1.2` on 2026-03-26.
+
+Highlights:
+
+- added the SQLite-backed control-plane store in `src/invoice_ai/control_plane/`
+- added the runtime path `control_plane_db_path`
+- wired the shared CLI/HTTP execution path to record requests, jobs, events, and ERP-write idempotency fingerprints
+- indexed approval artifacts, memory review actions, ingest records, and quote preview artifacts
+- documented the store in `docs/control-plane-store.md`
+
+Verification:
+
+- `nix shell .#python -c python -m compileall src`
+- `nix flake check`
+- temp-state CLI runs confirmed:
+  - database creation at `control-plane.sqlite3`
+  - request/job/event rows on normal tool execution
+  - review and artifact rows on approval-producing memory suggestions
+  - review action rows on memory suggestion acceptance
+  - idempotency rows on dry-run ERP write-style tools

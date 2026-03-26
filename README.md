@@ -14,6 +14,7 @@ Nix-native self-hosted AI invoicing workspace.
 - a planner and orchestrator for chat-facing routing
 - markdown memory with review-gated suggestions
 - filesystem-backed approvals, revisions, and PDF preview artifacts
+- a local SQLite-backed control-plane metadata store for requests, jobs, reviews, artifacts, and idempotency indexes
 
 The repo is still incomplete as a product. The current stage is hardening and completion, not initial architecture discovery.
 
@@ -50,6 +51,7 @@ Environment contract:
 - `INVOICE_AI_PUBLIC_URL`
 - `INVOICE_AI_HOST_NAME`
 - `INVOICE_AI_STATE_DIR`
+- `INVOICE_AI_CONTROL_PLANE_DB_PATH`
 - `INVOICE_AI_DOCUMENTS_DIR`
 - `INVOICE_AI_MEMORY_DIR`
 - `INVOICE_AI_INGEST_DIR`
@@ -152,7 +154,7 @@ The current weak points are:
 - thin ERP semantic coverage outside the first quote and purchase-invoice slice
 - extraction quality is still narrow and confidence handling is basic
 - the HTTP service is still a thin tool runner rather than a hardened operator API
-- no first-class workflow/job ledger yet
+- the new local job/event ledger is not yet exposed through a fuller operator API
 - no end-to-end approval actions through the operator surface yet
 - no disposable integration stack or broad end-to-end test suite yet
 - no actual `nix-dotfiles` deployment integration yet
@@ -190,6 +192,7 @@ The immediate project direction is:
 - `docs/architecture-review-2026-03.md`
 - `docs/completion-plan.md`
 - `docs/control-plane-hardening.md`
+- `docs/control-plane-store.md`
 - `docs/schema-conventions.md`
 - `docs/foundation-spec.md`
 - `docs/erpnext-entity-map.md`

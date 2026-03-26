@@ -14,6 +14,7 @@ The purpose of this layout is to keep mutable operational state out of git while
    - review and approval artifacts
    - ingestion source material
    - working revision snapshots
+   - SQLite-backed control-plane metadata
 3. The layout should be auditable and human-readable where practical.
 4. The layout should avoid excessive retention of noisy transient artifacts.
 
@@ -51,6 +52,12 @@ Examples:
 - artifact indexes
 - ingest indexes
 - memory suggestion indexes
+
+Current implementation:
+
+- populated from the shared CLI/HTTP execution path
+- indexes approval writes, memory review actions, ingest records, quotation preview artifacts, and ERP write idempotency fingerprints
+- documented further in `docs/control-plane-store.md`
 
 Retention policy:
 

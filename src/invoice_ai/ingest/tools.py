@@ -7,6 +7,7 @@ import uuid
 from pydantic import ValidationError
 
 from ..config import RuntimeConfig
+from ..control_plane.store import ControlPlaneStore
 from ..erp.client import ERPNextClient
 from ..erp.schemas import ApprovalPayload, ToolRequest, ToolResponse, approval_artifact_paths
 from ..erp.tools import ERPToolExecutor
@@ -30,7 +31,10 @@ class IngestToolExecutor:
         self.erp_executor = erp_executor
         self.extract_executor = extract_executor
         self.normalizer = SupplierInvoiceNormalizer(erp_client)
-        self.store = IngestStore(config.paths.ingest_dir)
+        self.store = IngestStore(
+            config.paths.ingest_dir,
+            control_plane=ControlPlaneStore.from_runtime_config(config),
+        )
 
     @classmethod
     def from_runtime_config(cls, config: RuntimeConfig) -> "IngestToolExecutor":

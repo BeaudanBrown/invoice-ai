@@ -8,6 +8,9 @@ import re
 from typing import Any
 import uuid
 
+from ..control_plane.models import ReviewStatus
+from ..control_plane.store import ControlPlaneStore
+
 
 @dataclass(frozen=True)
 class MemoryDocument:
@@ -68,8 +71,9 @@ class MemorySuggestion:
 
 
 class MemoryStore:
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, *, control_plane: ControlPlaneStore | None = None) -> None:
         self.root = root
+        self.control_plane = control_plane
 
     def planning_context(
         self,
@@ -255,6 +259,19 @@ class MemoryStore:
             ),
         )
         self._write_suggestion(suggestion)
+        if self.control_plane is not None:
+            self.control_plane.upsert_memory_suggestion(
+                suggestion_id=suggestion.suggestion_id,
+                scope=suggestion.scope,
+                slug=suggestion.slug,
+                status=ReviewStatus.PENDING,
+                linked_review_id=suggestion.suggestion_id,
+                current_document_path=(
+                    None
+                    if current_document is None
+                    else str(current_document.path)
+                ),
+            )
         return suggestion
 
     def accept_suggestion(
@@ -291,6 +308,34 @@ class MemoryStore:
             decision_note=decision_note,
         )
         self._write_suggestion(updated)
+        if self.control_plane is not None:
+            self.control_plane.upsert_memory_suggestion(
+                suggestion_id=updated.suggestion_id,
+                scope=updated.scope,
+                slug=updated.slug,
+                status=ReviewStatus.ACCEPTED,
+                linked_review_id=updated.suggestion_id,
+                current_document_path=str(document.path),
+            )
+            self.control_plane.record_review(
+                review_id=updated.suggestion_id,
+                request_id=None,
+                review_kind=f"memory.{updated.action}",
+                status=ReviewStatus.ACCEPTED,
+                target={
+                    "doctype": "MemoryDocument",
+                    "name": f"{updated.scope}/{updated.slug}",
+                    "scope": updated.scope,
+                    "slug": updated.slug,
+                },
+                target_summary=f"Review memory suggestion for {updated.scope}/{updated.slug}",
+            )
+            self.control_plane.record_review_action(
+                review_id=updated.suggestion_id,
+                action_type="accept",
+                operator_id=reviewer,
+                note=decision_note,
+            )
         return updated, document
 
     def reject_suggestion(
@@ -308,6 +353,38 @@ class MemoryStore:
             decision_note=decision_note,
         )
         self._write_suggestion(updated)
+        if self.control_plane is not None:
+            self.control_plane.upsert_memory_suggestion(
+                suggestion_id=updated.suggestion_id,
+                scope=updated.scope,
+                slug=updated.slug,
+                status=ReviewStatus.REJECTED,
+                linked_review_id=updated.suggestion_id,
+                current_document_path=(
+                    None
+                    if updated.current_document is None
+                    else str(updated.current_document.get("path"))
+                ),
+            )
+            self.control_plane.record_review(
+                review_id=updated.suggestion_id,
+                request_id=None,
+                review_kind=f"memory.{updated.action}",
+                status=ReviewStatus.REJECTED,
+                target={
+                    "doctype": "MemoryDocument",
+                    "name": f"{updated.scope}/{updated.slug}",
+                    "scope": updated.scope,
+                    "slug": updated.slug,
+                },
+                target_summary=f"Review memory suggestion for {updated.scope}/{updated.slug}",
+            )
+            self.control_plane.record_review_action(
+                review_id=updated.suggestion_id,
+                action_type="reject",
+                operator_id=reviewer,
+                note=decision_note,
+            )
         return updated
 
     def _selected_documents(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ..control_plane.store import ControlPlaneStore
 from ..erp.schemas import ApprovalPayload, ToolRequest, ToolResponse, approval_artifact_paths
 from ..config import RuntimeConfig
 from .store import MemoryStore
@@ -8,7 +9,10 @@ from .store import MemoryStore
 class MemoryToolExecutor:
     def __init__(self, *, config: RuntimeConfig) -> None:
         self.config = config
-        self.store = MemoryStore(config.paths.memory_dir)
+        self.store = MemoryStore(
+            config.paths.memory_dir,
+            control_plane=ControlPlaneStore.from_runtime_config(config),
+        )
 
     @classmethod
     def from_runtime_config(cls, config: RuntimeConfig) -> "MemoryToolExecutor":

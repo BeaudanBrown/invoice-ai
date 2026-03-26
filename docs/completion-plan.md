@@ -32,7 +32,8 @@ Required outcomes:
 Current progress:
 
 - the schema hardening pass is complete, with `Pydantic` boundary models documented in `docs/schema-conventions.md`
-- the next control-plane step is the SQLite-backed metadata store
+- the SQLite-backed metadata store is now in place for requests, jobs, events, reviews, artifacts, ingest indexes, memory suggestion indexes, and ERP-write idempotency fingerprints
+- the next control-plane step is the FastAPI migration over that store-backed runtime
 
 Acceptance:
 

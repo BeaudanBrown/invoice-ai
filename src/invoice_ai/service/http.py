@@ -7,16 +7,10 @@ import json
 
 from pydantic import ValidationError
 
-from ..approvals.store import ApprovalStore
 from ..config import RuntimeConfig
-from ..erp.schemas import ToolRequest
-from ..erp.tools import ERPToolExecutor
-from ..extract.tools import ExtractToolExecutor
-from ..ingest.tools import IngestToolExecutor
-from ..memory.tools import MemoryToolExecutor
-from ..orchestrator.tools import OrchestratorToolExecutor
-from ..planner.tools import PlannerToolExecutor
-from ..quotes.tools import QuoteToolExecutor
+from ..control_plane.models import RequestSource
+from ..control_plane.store import ControlPlaneStore
+from ..execution import execute_tool_request
 from .models import ErrorResponse, HealthResponse, RuntimeDependencyView, RuntimeResponse, RuntimeServiceView, ToolRunRequest
 
 
@@ -30,16 +24,19 @@ class ToolExecutionContext:
         *,
         write_approval_artifacts: bool,
     ) -> dict[str, object]:
-        request = payload.tool_request()
-        response = _tool_executor_for(request.tool_name, self.config).execute(request)
-        if write_approval_artifacts and response.approval is not None:
-            ApprovalStore(self.config.paths.approvals_dir).write(response)
+        response = execute_tool_request(
+            config=self.config,
+            request=payload.tool_request(),
+            source=RequestSource.HTTP,
+            write_approval_artifacts=write_approval_artifacts,
+        )
         return response.as_dict()
 
 
 class InvoiceAIHTTPServer(ThreadingHTTPServer):
     def __init__(self, config: RuntimeConfig) -> None:
         self.runtime_config = config
+        ControlPlaneStore.from_runtime_config(config).ensure()
         self.tool_context = ToolExecutionContext(config)
         address = (config.service.listen_address, config.service.port)
         super().__init__(address, InvoiceAIRequestHandler)
@@ -141,21 +138,3 @@ class InvoiceAIRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
-
-
-def _tool_executor_for(tool_name: str, config: RuntimeConfig) -> object:
-    if tool_name.startswith("extract."):
-        return ExtractToolExecutor.from_runtime_config(config)
-    if tool_name.startswith("erp."):
-        return ERPToolExecutor.from_runtime_config(config)
-    if tool_name.startswith("ingest."):
-        return IngestToolExecutor.from_runtime_config(config)
-    if tool_name.startswith("memory."):
-        return MemoryToolExecutor.from_runtime_config(config)
-    if tool_name.startswith("orchestrator."):
-        return OrchestratorToolExecutor.from_runtime_config(config)
-    if tool_name.startswith("planner."):
-        return PlannerToolExecutor.from_runtime_config(config)
-    if tool_name.startswith("quotes."):
-        return QuoteToolExecutor.from_runtime_config(config)
-    raise ValueError(f"Unsupported tool family for {tool_name}")

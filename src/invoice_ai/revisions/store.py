@@ -4,12 +4,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ..control_plane.store import ControlPlaneStore
 from ..persistence import LatestQuotationRevisionRecord, QuotationRevisionRecord
 
 
 class RevisionStore:
-    def __init__(self, revisions_dir: Path) -> None:
+    def __init__(
+        self,
+        revisions_dir: Path,
+        *,
+        control_plane: ControlPlaneStore | None = None,
+    ) -> None:
         self.revisions_dir = revisions_dir
+        self.control_plane = control_plane
 
     def write_quotation_revision(
         self,
@@ -62,6 +69,14 @@ class RevisionStore:
             + "\n",
             encoding="utf-8",
         )
+        if self.control_plane is not None and preview_path is not None:
+            self.control_plane.record_artifact(
+                parent_kind="revision",
+                parent_id=revision_id,
+                artifact_kind="quote_preview_pdf",
+                path=preview_path,
+                request_id=str(request_payload.get("request_id") or draft_key),
+            )
         return payload.as_dict()
 
     def load_latest_quotation_revision(self, draft_key: str) -> dict[str, Any]:

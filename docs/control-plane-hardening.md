@@ -92,6 +92,16 @@ The local control-plane store should own metadata such as:
 - ingest indexes
 - memory suggestion indexes
 
+The current implementation now covers:
+
+- top-level request and job execution metadata
+- append-only job events
+- review records and review actions
+- artifact indexing for approval files and quote preview PDFs
+- ingest indexes tied to record directories and linked ERP refs where present
+- memory suggestion indexes
+- ERP write-style idempotency fingerprints
+
 It should not own:
 
 - canonical customer, supplier, item, quote, or invoice truth

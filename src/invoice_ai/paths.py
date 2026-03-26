@@ -14,6 +14,7 @@ def _env_path(name: str, default: str) -> Path:
 @dataclass(frozen=True)
 class RuntimePaths:
     state_dir: Path
+    control_plane_db_path: Path
     documents_dir: Path
     memory_dir: Path
     ingest_dir: Path
@@ -27,6 +28,10 @@ class RuntimePaths:
         state_dir = _env_path("INVOICE_AI_STATE_DIR", "/var/lib/invoice-ai")
         return cls(
             state_dir=state_dir,
+            control_plane_db_path=_env_path(
+                "INVOICE_AI_CONTROL_PLANE_DB_PATH",
+                str(state_dir / "control-plane.sqlite3"),
+            ),
             documents_dir=_env_path(
                 "INVOICE_AI_DOCUMENTS_DIR", str(state_dir / "documents")
             ),
@@ -47,6 +52,7 @@ class RuntimePaths:
     def required_directories(self) -> tuple[Path, ...]:
         return (
             self.state_dir,
+            self.control_plane_db_path.parent,
             self.documents_dir,
             self.memory_dir,
             self.ingest_dir,
@@ -63,6 +69,7 @@ class RuntimePaths:
     def as_json(self) -> dict[str, Any]:
         return {
             "state_dir": str(self.state_dir),
+            "control_plane_db_path": str(self.control_plane_db_path),
             "documents_dir": str(self.documents_dir),
             "memory_dir": str(self.memory_dir),
             "ingest_dir": str(self.ingest_dir),

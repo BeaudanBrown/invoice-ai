@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ..control_plane.store import ControlPlaneStore
 from ..persistence import (
     IngestComposedResultRecord,
     IngestExtractedRecord,
@@ -14,8 +15,14 @@ from ..persistence import (
 
 
 class IngestStore:
-    def __init__(self, ingest_dir: Path) -> None:
+    def __init__(
+        self,
+        ingest_dir: Path,
+        *,
+        control_plane: ControlPlaneStore | None = None,
+    ) -> None:
         self.ingest_dir = ingest_dir
+        self.control_plane = control_plane
 
     def write_processed(
         self,
@@ -36,6 +43,12 @@ class IngestStore:
             encoding="utf-8",
         )
         (record_dir / "proposal.json").write_text(processed.to_json_text() + "\n", encoding="utf-8")
+        self._upsert_index(
+            request_id=request_id,
+            record_dir=record_dir,
+            source=source,
+            proposal=normalized,
+        )
         return record_dir
 
     def write_extracted(
@@ -60,6 +73,12 @@ class IngestStore:
             extracted_record.to_json_text() + "\n",
             encoding="utf-8",
         )
+        self._upsert_index(
+            request_id=request_id,
+            record_dir=record_dir,
+            source=source,
+            proposal=extracted,
+        )
         return record_dir
 
     def write_composed_result(
@@ -80,6 +99,12 @@ class IngestStore:
             ).to_json_text()
             + "\n",
             encoding="utf-8",
+        )
+        self._upsert_index(
+            request_id=request_id,
+            record_dir=record_dir,
+            source={},
+            proposal=result,
         )
         return output_path
 
@@ -105,6 +130,12 @@ class IngestStore:
             rejected_record.to_json_text() + "\n",
             encoding="utf-8",
         )
+        self._upsert_index(
+            request_id=request_id,
+            record_dir=record_dir,
+            source=source,
+            proposal=error_summary,
+        )
         return record_dir
 
     def _record_dir(self, category: str, request_id: str) -> Path:
@@ -116,4 +147,41 @@ class IngestStore:
             / f"{now.month:02d}"
             / f"{now.day:02d}"
             / request_id
+        )
+
+    def _upsert_index(
+        self,
+        *,
+        request_id: str,
+        record_dir: Path,
+        source: dict[str, Any],
+        proposal: dict[str, Any],
+    ) -> None:
+        if self.control_plane is None:
+            return
+        source_ref = dict(source.get("source_ref", source))
+        extracted_invoice = dict(proposal.get("extracted_invoice", {}))
+        normalized_invoice = dict(proposal.get("normalized_invoice", {}))
+        purchase_invoice = dict(proposal.get("purchase_invoice", {}))
+        doc_ref = dict(purchase_invoice.get("doc_ref", {}))
+        self.control_plane.upsert_ingest_index(
+            ingest_id=request_id,
+            request_id=request_id,
+            source_fingerprint=(
+                source_ref.get("source_hash")
+                or source_ref.get("source_fingerprint")
+            ),
+            supplier_hint=(
+                normalized_invoice.get("supplier", {}) or extracted_invoice
+            ).get("supplier_name"),
+            external_invoice_reference=(
+                extracted_invoice.get("supplier_invoice_ref")
+                or normalized_invoice.get("bill_no")
+            ),
+            linked_review_id=(
+                proposal.get("approval", {}) or {}
+            ).get("approval_id"),
+            linked_erp_doctype=None if not doc_ref else str(doc_ref.get("doctype")),
+            linked_erp_name=None if not doc_ref else str(doc_ref.get("name")),
+            record_dir=str(record_dir),
         )

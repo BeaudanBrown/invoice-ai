@@ -5,6 +5,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from ..config import RuntimeConfig
+from ..control_plane.store import ControlPlaneStore
 from ..erp.schemas import ApprovalPayload, ToolRequest, ToolResponse, approval_artifact_paths
 from ..ingest.store import IngestStore
 from .docling import DoclingClient, DoclingClientError
@@ -15,7 +16,10 @@ from .parser import parse_supplier_invoice_text
 class ExtractToolExecutor:
     def __init__(self, *, config: RuntimeConfig) -> None:
         self.config = config
-        self.store = IngestStore(config.paths.ingest_dir)
+        self.store = IngestStore(
+            config.paths.ingest_dir,
+            control_plane=ControlPlaneStore.from_runtime_config(config),
+        )
         self.docling = (
             DoclingClient(config.dependencies.docling_url)
             if config.dependencies.docling_url is not None

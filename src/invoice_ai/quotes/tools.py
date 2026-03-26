@@ -6,6 +6,7 @@ from pydantic import ValidationError
 
 from ..artifacts.pdf import QuotePreviewRenderer
 from ..config import RuntimeConfig
+from ..control_plane.store import ControlPlaneStore
 from ..erp.schemas import ToolRequest, ToolResponse
 from ..erp.tools import ERPToolExecutor
 from ..revisions.store import RevisionStore
@@ -19,7 +20,10 @@ class QuoteToolExecutor:
         self.config = config
         self.erp = ERPToolExecutor.from_runtime_config(config)
         self.context_builder = QuoteContextBuilder(config=config, erp=self.erp)
-        self.revisions = RevisionStore(config.paths.revisions_dir)
+        self.revisions = RevisionStore(
+            config.paths.revisions_dir,
+            control_plane=ControlPlaneStore.from_runtime_config(config),
+        )
         self.preview_renderer = QuotePreviewRenderer(config.paths.artifacts_dir)
 
     @classmethod
