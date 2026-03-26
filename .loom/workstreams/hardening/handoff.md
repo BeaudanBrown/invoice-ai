@@ -18,8 +18,8 @@ Inherited completed work:
 
 ## Current Risks
 
-- service API is still a thin tool runner without auth or request identity
-- no first-class job/event ledger exists yet
+- service API is still missing enforced auth and fuller operator review surfaces
+- request/job metadata exists now, but it is not yet exposed through a broader operator API
 - sales invoices are still missing from the ERP semantic and operator layers
 - operator review flows are incomplete
 - extraction confidence and duplicate handling are still basic
@@ -87,3 +87,26 @@ Verification:
   - review and artifact rows on approval-producing memory suggestions
   - review action rows on memory suggestion acceptance
   - idempotency rows on dry-run ERP write-style tools
+
+Completed `coordinator-jdv.1.3` on 2026-03-26.
+
+Highlights:
+
+- replaced the stdlib HTTP shell with a FastAPI app in `src/invoice_ai/service/http.py`
+- switched `serve-http` to run on `uvicorn`
+- kept the `execute_tool_request()` path as the business boundary
+- added dependency-injected runtime state for future auth and background-job hooks
+- added `X-Request-ID` middleware and optional `X-Operator-Id` HTTP injection
+- exposed OpenAPI/docs routes without changing the core business layer
+- updated the flake and module package environments to include `fastapi` and `uvicorn`
+
+Verification:
+
+- `nix shell .#python -c python -m compileall src`
+- `nix flake check`
+- live temp-state FastAPI probe covering:
+  - `GET /healthz`
+  - `GET /api/runtime`
+  - `POST /api/tools/run`
+  - `GET /openapi.json`
+  - control-plane `requests.operator_id` recording from `X-Operator-Id`

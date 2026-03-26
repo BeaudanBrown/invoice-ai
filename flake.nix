@@ -15,7 +15,9 @@
 
       perSystem = { pkgs, ... }: let
         python = pkgs.python3.withPackages (ps: with ps; [
+          fastapi
           pydantic
+          uvicorn
         ]);
       in {
         packages.python = python;

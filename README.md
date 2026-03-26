@@ -7,7 +7,7 @@ Nix-native self-hosted AI invoicing workspace.
 `invoice-ai` is no longer just a foundation repo. It now has a working control-plane scaffold with:
 
 - a packaged CLI
-- a small HTTP service
+- a FastAPI operator service
 - an ERP-first semantic tool layer for `ERPNext`
 - supplier-document extraction and ingest flows
 - quote draft and revision flows
@@ -153,7 +153,7 @@ The current weak points are:
 - no sales-invoice drafting path yet
 - thin ERP semantic coverage outside the first quote and purchase-invoice slice
 - extraction quality is still narrow and confidence handling is basic
-- the HTTP service is still a thin tool runner rather than a hardened operator API
+- auth is not enforced yet even though the service shell is now structured for it
 - the new local job/event ledger is not yet exposed through a fuller operator API
 - no end-to-end approval actions through the operator surface yet
 - no disposable integration stack or broad end-to-end test suite yet
@@ -172,8 +172,12 @@ Current endpoints:
 - `GET /healthz`
 - `GET /api/runtime`
 - `POST /api/tools/run`
+- `GET /docs`
+- `GET /openapi.json`
 
 `POST /api/tools/run` accepts the same JSON envelope used by `run-tool`. It may also include `write_approval_artifacts: true` at the top level to persist approval artifacts while executing the request.
+
+The FastAPI service also emits `X-Request-ID` on every response and accepts an optional `X-Operator-Id` header so auth and operator attribution can be added without changing the business layer.
 
 ## Direction
 

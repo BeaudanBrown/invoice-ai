@@ -1,12 +1,17 @@
 { lib, pkgs, config, ... }:
 let
   cfg = config.services.invoice-ai;
+  defaultPython = pkgs.python3.withPackages (ps: with ps; [
+    fastapi
+    pydantic
+    uvicorn
+  ]);
   defaultPackage = pkgs.writeShellApplication {
     name = "invoice-ai";
-    runtimeInputs = [ pkgs.python3 ];
+    runtimeInputs = [ defaultPython ];
     text = ''
       export PYTHONPATH="${../src}:''${PYTHONPATH:-}"
-      exec python3 ${../bin/invoice-ai} "$@"
+      exec ${defaultPython}/bin/python3 ${../bin/invoice-ai} "$@"
     '';
   };
   runtimeEnvironment = lib.filterAttrs (_: value: value != null) {

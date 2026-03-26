@@ -118,6 +118,8 @@ Current endpoints:
 - `GET /healthz`
 - `GET /api/runtime`
 - `POST /api/tools/run`
+- `GET /docs`
+- `GET /openapi.json`
 
 The service process is started with:
 

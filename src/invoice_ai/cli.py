@@ -13,7 +13,7 @@ from .control_plane.models import RequestSource
 from .control_plane.store import ControlPlaneStore
 from .erp.schemas import ToolRequest
 from .execution import execute_tool_request
-from .service.http import InvoiceAIHTTPServer
+from .service.http import serve_http
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -126,7 +126,6 @@ def handle_serve_http(_args: argparse.Namespace) -> int:
     config = RuntimeConfig.from_env()
     config.paths.ensure()
     ControlPlaneStore.from_runtime_config(config).ensure()
-    server = InvoiceAIHTTPServer(config)
     print(
         json.dumps(
             {
@@ -138,12 +137,7 @@ def handle_serve_http(_args: argparse.Namespace) -> int:
         ),
         flush=True,
     )
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.server_close()
+    serve_http(config)
     return 0
 
 

@@ -51,6 +51,14 @@ Expected benefits:
 
 This does not change the higher-level architecture. It only replaces the service shell.
 
+The current implementation target for this decision is:
+
+- `FastAPI` route composition
+- `uvicorn` as the local ASGI server
+- dependency-injected runtime state
+- request-id middleware
+- optional operator identity injection at the HTTP boundary
+
 ## Control-Plane Store Decision
 
 The system should keep three different persistence classes:
