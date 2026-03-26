@@ -9,6 +9,7 @@ Take the existing `invoice-ai` scaffold and turn it into a hardened, completion-
 - keep the project self-hosted and Nix-native
 - keep `ERPNext` as the canonical system of record
 - treat the repo-local `invoice-ai` control plane as the canonical planner/orchestrator for the operator path
+- treat the repo-owned NixOS module as the canonical deployment boundary for both the AI layer and an embedded `ERPNext` stack
 - treat `Ollama` and `Docling` as supporting dependencies
 - treat `n8n` as optional integration infrastructure rather than a core runtime dependency
 - preserve approval-gated actions for master-data creation, destructive operations, and final submission
@@ -20,7 +21,7 @@ Take the existing `invoice-ai` scaffold and turn it into a hardened, completion-
 3. ERP semantic tool coverage is still too narrow
 4. the review surface is incomplete beyond list and partial inspect flows
 5. extraction and ingest need better confidence, dedupe, and reprocessing behavior
-6. the repo still needs a real `nix-dotfiles` integration and end-to-end verification path
+6. the repo still needs real retention/verification work around the combined `nix-dotfiles` integration and embedded ERPNext OCI deployment shape
 
 ## Current Hardening Decisions
 

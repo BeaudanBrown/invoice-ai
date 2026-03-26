@@ -21,7 +21,7 @@ Inherited completed work:
 - operator auth is now enforced, but it is still just a token-file boundary with no richer policy or role model
 - operator review flows are now complete for the current memory-backed review type, but broader approval classes still need to converge onto the same operator contract
 - extraction quality still needs to improve beyond the new anomaly/dedupe/reprocess baseline
-- deployment and verification are still mostly mock-driven
+- deployment and verification are still mostly mock-driven, although the embedded ERPNext OCI path now exists in the NixOS module and still needs real runtime verification
 - the product still has no actual operator-facing installable UI
 
 ## Latest Completed Slice
@@ -51,8 +51,24 @@ Verification:
 
 Use the hardening Beads epic to drive:
 
-1. deployment and end-to-end verification
+1. deployment retention, secret population, and end-to-end verification around the combined invoice-ai plus ERPNext module
 2. the first operator-facing installable UI
+
+Deployment direction update on 2026-03-26:
+
+- ERPNext is no longer treated as permanently external to the NixOS module boundary
+- the target deployment shape is one `invoice-ai` module that can embed ERPNext via OCI containers
+- the fast path should follow the official ERPNext/Frappe container topology rather than attempting native packaging first
+- repo docs and Beads now need to treat secrets, storage, bootstrap, and verification as combined invoice-ai plus ERPNext concerns
+
+Implemented deployment slice on 2026-03-27:
+
+- `modules/invoice-ai.nix` now supports `services.invoice-ai.erpnext.mode = "embedded"`
+- embedded mode now provisions MariaDB, Redis cache/queue, ERPNext backend/frontend/websocket, worker, and scheduler containers through `virtualisation.oci-containers`
+- embedded mode now provisions one-shot bootstrap units for podman network setup, MariaDB env generation, bench configuration, default-site creation, and persistent site config application
+- the NAS consumer in `nix-dotfiles` now targets embedded ERPNext at `erp.bepis.lol`
+- local validation succeeded only with `nix-dotfiles --override-input invoice-ai /home/beau/documents/projects/invoice-ai` because the repo input still points at the last pushed GitHub commit and these module changes are not pushed yet
+- the main remaining deployment gap is post-bootstrap ERP service-user/API credential creation plus real runtime verification against the embedded stack
 
 ## Notes
 

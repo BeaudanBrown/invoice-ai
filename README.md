@@ -176,7 +176,7 @@ The current weak points are:
 - operator auth is currently bearer-token-file based only; there is no richer role or policy model yet
 - the current review-action path is still memory-backed; non-memory approval types have not yet been converged onto the same operator contract
 - no real ERPNext-backed disposable integration stack yet; the current disposable path is mock-backed
-- no actual `nix-dotfiles` deployment integration yet
+- the combined deployment story is still incomplete: the target is one module that embeds ERPNext via OCI containers, but that embedded path is not implemented yet
 
 ## Current Service Surface
 

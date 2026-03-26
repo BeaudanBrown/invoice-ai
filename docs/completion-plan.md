@@ -126,21 +126,26 @@ Objective:
 Required outcomes:
 
 - `nix-dotfiles` integration contract exercised for the NixOS module
+- the `invoice-ai` module can deploy ERPNext through OCI containers as part of the same product boundary
 - retention and cleanup policy implemented for approvals, revisions, artifacts, cache, and ingest state
-- disposable end-to-end verification path against a realistic dependency stack
+- retention and backup policy documented for ERPNext site and database state
+- disposable end-to-end verification path against the embedded ERPNext dependency stack
 - documented recovery and troubleshooting path
 
 Acceptance:
 
 - the repo can be imported cleanly as a NixOS module in `nix-dotfiles`
-- the service can be stood up with realistic dependencies and verified end to end
+- the module can stand up both the AI control plane and embedded ERPNext on the NAS path
+- the combined service can be verified end to end against the same deployment shape it intends to run in production
 
 Current progress:
 
 - a disposable mock-backed dev stack now exists through `nix run . -- dev-stack`
 - a one-command mock-backed smoke path now exists through `nix run . -- dev-smoke-test`
 - the local CLI/operator dev path no longer requires pre-running `init-paths` or setting `INVOICE_AI_ERPNEXT_URL` for review-only flows
-- remaining work in this stage is host integration, retention/cleanup behavior, and proving the same flows against a more realistic dependency stack than the current mocks
+- the first `nix-dotfiles` import and targeted subsystem evaluation path now exist for the AI control plane itself
+- the module now supports `erpnext.mode = "embedded"` through OCI containers plus bootstrap jobs for bench configuration, default-site creation, and stable site config
+- remaining work in this stage is retention/backup policy, service-user/API credential bootstrap, and proving the same flows against that embedded stack instead of mocks
 
 ## Stage 6: Operator UI
 
@@ -180,7 +185,7 @@ The recommended order is:
 2. sales-invoice and ERP surface completion
 3. review-action completion
 4. ingest hardening
-5. deployment and verification
+5. deployment and verification around the combined invoice-ai plus ERPNext module
 6. operator UI
 
 Reason:
@@ -204,6 +209,6 @@ This phase is complete when:
 1. a user can ingest supplier documents, draft quotes, and draft invoices through the operator surface
 2. review-gated actions are inspectable and actionable without raw tool knowledge
 3. the runtime has auth, auditability, idempotent write handling, and stable job records
-4. the NixOS module is exercised through `nix-dotfiles`
-5. real end-to-end verification exists beyond mocks
+4. the NixOS module is exercised through `nix-dotfiles` as one combined product deployment
+5. real end-to-end verification exists beyond mocks against the embedded ERPNext stack
 6. a user-facing installable operator UI exists for the main quote/invoice loop

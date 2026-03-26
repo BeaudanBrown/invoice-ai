@@ -10,10 +10,12 @@ This repository is a Nix-native project for building a self-hosted AI-assisted i
 4. `docs/architecture-review-2026-03.md`
 5. `docs/completion-plan.md`
 6. `docs/control-plane-hardening.md`
-7. `docs/schema-conventions.md`
-8. `docs/decisions/foundation-open-questions.md`
-9. `.loom/workstreams/<workstream>/context.md`
-10. `.loom/workstreams/<workstream>/handoff.md`
+7. `docs/nixos-module-contract.md`
+8. `docs/deployment-secrets.md`
+9. `docs/schema-conventions.md`
+10. `docs/decisions/foundation-open-questions.md`
+11. `.loom/workstreams/<workstream>/context.md`
+12. `.loom/workstreams/<workstream>/handoff.md`
 
 ## Repository Shape
 
@@ -36,6 +38,7 @@ This repository is a Nix-native project for building a self-hosted AI-assisted i
 - Keep `nixosModules.default` aligned with `nixosModules.invoice-ai`.
 - Keep the service namespace under `services.invoice-ai`.
 - Design the module so `nix-dotfiles` can import this repo directly as a flake input without patching local paths.
+- Treat embedded `ERPNext` via OCI containers as the primary fast-deployment path for the first real NAS rollout.
 - Keep deployment assumptions NAS-friendly: persistent state directories, reverse-proxy readiness, and declarative secret wiring points.
 
 ## Verification

@@ -14,6 +14,11 @@ The current architecture direction is:
 - `Docling` for structured document extraction from supplier invoices and receipts
 - optional external automation tools such as `n8n`, kept outside the core request path unless a later integration needs them
 
+For deployment, the target shape is one repo-owned NixOS module that can ship:
+
+- the `invoice-ai` control plane
+- an embedded `ERPNext` stack via OCI containers for fast deployment on the NAS
+
 This reflects the implemented system more accurately than the original foundation stack notes. The repo now already contains its own control plane, so external workflow tools should be treated as integrations, not as the primary orchestrator.
 
 ## Core Capabilities
@@ -70,6 +75,7 @@ Target flow:
 - open-source components only for the core stack
 - Nix-native packaging and deployment from the start
 - deployable as a NixOS module on the NAS through `nix-dotfiles`
+- deployable as one module that can include ERPNext through OCI containers for the first real deployment path
 - no dependence on coordinator-local state for implementation logic
 
 ## Primary Specs
