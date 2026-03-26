@@ -12,6 +12,9 @@ It accepts a structured operator request envelope with one of these request kind
 
 - `supplier_document_intake`
 - `review_queue`
+- `review_detail`
+- `review_accept`
+- `review_reject`
 - `quote_draft`
 - `quote_revision`
 - `invoice_draft`
@@ -129,4 +132,11 @@ while the planner reuses:
 As the planner gets smarter, the orchestrator should stay thin.
 
 It should keep normalizing routing, conversation state, and response shape, while the existing delegated tools remain the only code that knows how to create or revise ERP-backed drafts.
-`review_queue` currently delegates to `memory.list_reviews`, which lets the main operator-facing surface answer pending memory-review questions without exposing the lower-level memory tool family directly.
+The current review requests delegate like this:
+
+- `review_queue` -> `memory.list_reviews`
+- `review_detail` -> `memory.get_review`
+- `review_accept` -> `memory.accept_suggestion`
+- `review_reject` -> `memory.reject_suggestion`
+
+That keeps the user-facing operator path generic even though the currently implemented review type is still memory-backed.

@@ -19,7 +19,7 @@ Inherited completed work:
 ## Current Risks
 
 - operator auth is now enforced, but it is still just a token-file boundary with no richer policy or role model
-- operator review flows are still incomplete beyond inspection
+- operator review flows are now complete for the current memory-backed review type, but broader approval classes still need to converge onto the same operator contract
 - extraction quality still needs to improve beyond the new anomaly/dedupe/reprocess baseline
 - deployment and verification are still mostly mock-driven
 
@@ -50,8 +50,7 @@ Verification:
 
 Use the hardening Beads epic to drive:
 
-1. review-action completion
-2. deployment and end-to-end verification
+1. deployment and end-to-end verification
 
 ## Notes
 
@@ -166,4 +165,26 @@ Verification:
   - authenticated `GET /api/requests`
   - authenticated `GET /api/jobs`
   - authenticated `GET /api/reviews`
-  - unauthenticated `/api/runtime` returning 401
+- unauthenticated `/api/runtime` returning 401
+
+Completed `coordinator-jdv.3` on 2026-03-26.
+
+Highlights:
+
+- added generic operator request kinds for `review_detail`, `review_accept`, and `review_reject`
+- extended the planner to parse review detail/accept/reject turns that reference a concrete review id
+- extended the orchestrator to delegate those requests through the existing memory review tools while keeping the operator contract generic
+- updated the repo docs to describe the converged review surface and its current memory-backed implementation boundary
+
+Verification:
+
+- `nix shell .#python -c python -m compileall src`
+- `nix flake check`
+- temp-state tool runs covering:
+  - `planner.handle_turn` for `show review <id>`
+  - `planner.handle_turn` for `accept review <id>`
+  - `planner.handle_turn` for `reject review <id> because ...`
+
+Follow-up issue:
+
+- `coordinator-2xm`: remove unnecessary runtime assumptions from local review/dev flows

@@ -132,6 +132,9 @@ It currently supports:
 
 - `supplier_document_intake`
 - `review_queue`
+- `review_detail`
+- `review_accept`
+- `review_reject`
 - `quote_draft`
 - `quote_revision`
 - `invoice_draft`
@@ -169,8 +172,7 @@ The current weak points are:
 - thin ERP semantic coverage outside the first quote and purchase-invoice slice
 - extraction quality is still narrower than it needs to be for repeated real use, even though anomalies, duplicate checks, and record reprocessing now exist
 - operator auth is currently bearer-token-file based only; there is no richer role or policy model yet
-- the operator API still lacks end-to-end review actions even though request, job, and review inspection are now exposed
-- no end-to-end approval actions through the operator surface yet
+- the current review-action path is still memory-backed; non-memory approval types have not yet been converged onto the same operator contract
 - no disposable integration stack or broad end-to-end test suite yet
 - no actual `nix-dotfiles` deployment integration yet
 

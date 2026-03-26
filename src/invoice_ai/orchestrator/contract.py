@@ -123,6 +123,40 @@ def next_request_contract(*, request_kind: str, response: ToolResponse) -> dict[
             ),
         }
 
+    if request_kind in {"review_queue", "review_detail"}:
+        return {
+            "contract_version": "structured-v1",
+            "planner_transition": (
+                "Review inspection stays inside the operator review contract so later review types "
+                "can share the same planner/orchestrator path."
+            ),
+            "supported_follow_up": {
+                "request_kind": "review_accept",
+                "payload_shape": {
+                    "review_id": "review-id",
+                    "decision_note": "Optional operator note",
+                },
+                "alternatives": [
+                    {
+                        "request_kind": "review_reject",
+                        "payload_shape": {
+                            "review_id": "review-id",
+                            "decision_note": "Why the review was rejected",
+                        },
+                    }
+                ],
+            },
+        }
+
+    if request_kind in {"review_accept", "review_reject"}:
+        return {
+            "contract_version": "structured-v1",
+            "planner_transition": (
+                "Review actions should remain explicit structured requests so the approval "
+                "surface stays auditable and convergent across review types."
+            ),
+        }
+
     return {
         "contract_version": "structured-v1",
         "planner_transition": (

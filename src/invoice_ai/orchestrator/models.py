@@ -51,9 +51,24 @@ def _looks_like_review_queue_request(payload: dict[str, Any]) -> bool:
     )
 
 
+def _looks_like_review_detail_request(payload: dict[str, Any]) -> bool:
+    return any(key in payload for key in ("review", "review_id"))
+
+
+def _looks_like_review_accept_request(payload: dict[str, Any]) -> bool:
+    return any(key in payload for key in ("review_accept", "accept_review"))
+
+
+def _looks_like_review_reject_request(payload: dict[str, Any]) -> bool:
+    return any(key in payload for key in ("review_reject", "reject_review"))
+
+
 class OperatorRequestKind(StrEnum):
     SUPPLIER_DOCUMENT_INTAKE = "supplier_document_intake"
     REVIEW_QUEUE = "review_queue"
+    REVIEW_DETAIL = "review_detail"
+    REVIEW_ACCEPT = "review_accept"
+    REVIEW_REJECT = "review_reject"
     QUOTE_DRAFT = "quote_draft"
     QUOTE_REVISION = "quote_revision"
     INVOICE_DRAFT = "invoice_draft"
@@ -81,6 +96,12 @@ class OperatorRequest(InvoiceAIModel):
                 request_kind = OperatorRequestKind.SUPPLIER_DOCUMENT_INTAKE
             elif _looks_like_review_queue_request(payload):
                 request_kind = OperatorRequestKind.REVIEW_QUEUE
+            elif _looks_like_review_accept_request(payload):
+                request_kind = OperatorRequestKind.REVIEW_ACCEPT
+            elif _looks_like_review_reject_request(payload):
+                request_kind = OperatorRequestKind.REVIEW_REJECT
+            elif _looks_like_review_detail_request(payload):
+                request_kind = OperatorRequestKind.REVIEW_DETAIL
             elif _looks_like_invoice_revision(payload):
                 request_kind = OperatorRequestKind.INVOICE_REVISION
             elif _looks_like_invoice_request(payload):
@@ -109,6 +130,12 @@ class OperatorRequest(InvoiceAIModel):
             return "ingest.process_supplier_document"
         if self.request_kind == OperatorRequestKind.REVIEW_QUEUE:
             return "memory.list_reviews"
+        if self.request_kind == OperatorRequestKind.REVIEW_DETAIL:
+            return "memory.get_review"
+        if self.request_kind == OperatorRequestKind.REVIEW_ACCEPT:
+            return "memory.accept_suggestion"
+        if self.request_kind == OperatorRequestKind.REVIEW_REJECT:
+            return "memory.reject_suggestion"
         if self.request_kind == OperatorRequestKind.INVOICE_REVISION:
             return "invoices.revise_draft"
         if self.request_kind == OperatorRequestKind.INVOICE_DRAFT:
@@ -134,6 +161,38 @@ class OperatorRequest(InvoiceAIModel):
                 payload["status"] = payload.pop("review_status")
             if "review_scope" in payload and "scope" not in payload:
                 payload["scope"] = payload.pop("review_scope")
+            return payload
+
+        if self.request_kind in {
+            OperatorRequestKind.REVIEW_DETAIL,
+            OperatorRequestKind.REVIEW_ACCEPT,
+            OperatorRequestKind.REVIEW_REJECT,
+        }:
+            nested_keys = {
+                OperatorRequestKind.REVIEW_DETAIL: "review",
+                OperatorRequestKind.REVIEW_ACCEPT: "review_accept",
+                OperatorRequestKind.REVIEW_REJECT: "review_reject",
+            }
+            nested = self.payload.get(nested_keys[self.request_kind])
+            if not isinstance(nested, dict):
+                alt_keys = {
+                    OperatorRequestKind.REVIEW_ACCEPT: "accept_review",
+                    OperatorRequestKind.REVIEW_REJECT: "reject_review",
+                }
+                alt_key = alt_keys.get(self.request_kind)
+                if alt_key is not None:
+                    nested = self.payload.get(alt_key)
+            if isinstance(nested, dict):
+                payload = dict(nested)
+            else:
+                payload = _clean_payload(self.payload)
+            review_id = payload.get("review_id") or payload.get("suggestion_id")
+            if review_id is None:
+                raise ValueError(
+                    f"{self.request_kind} requires review_id"
+                )
+            payload["suggestion_id"] = str(review_id)
+            payload.pop("review_id", None)
             return payload
 
         if self.request_kind == OperatorRequestKind.QUOTE_REVISION:

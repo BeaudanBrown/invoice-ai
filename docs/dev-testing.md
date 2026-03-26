@@ -32,8 +32,11 @@ Run the service with local-only state:
 ```bash
 export INVOICE_AI_STATE_DIR="$tmp/state"
 export INVOICE_AI_OPERATOR_TOKENS_FILE="$tmp/operators.json"
+export INVOICE_AI_ERPNEXT_URL="http://127.0.0.1:9999"
 nix run . -- serve-http
 ```
+
+The dummy `INVOICE_AI_ERPNEXT_URL` is currently needed even for review-only planner/orchestrator flows because executor construction is still broader than it should be. That is tracked as follow-up issue `coordinator-2xm`.
 
 ## Fastest Smoke Test
 

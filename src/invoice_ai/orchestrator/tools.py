@@ -135,6 +135,21 @@ def _stage_for(request_kind: str, response: ToolResponse) -> str:
             return "review_queue_listed"
         return "review_queue"
 
+    if request_kind == "review_detail":
+        if response.status == "success":
+            return "review_detail_loaded"
+        return "review_detail"
+
+    if request_kind == "review_accept":
+        if response.status == "success":
+            return "review_accepted"
+        return "review_accept"
+
+    if request_kind == "review_reject":
+        if response.status == "success":
+            return "review_rejected"
+        return "review_reject"
+
     if request_kind == "supplier_document_intake":
         delegated_stage = str(response.data.get("stage") or "")
         if response.status == "success":

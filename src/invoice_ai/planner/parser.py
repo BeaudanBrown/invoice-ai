@@ -12,6 +12,10 @@ class PlannerParseError(ValueError):
 
 
 def plan_operator_request(turn: PlannerTurn) -> dict[str, Any]:
+    review_action = _review_action_payload(turn.message)
+    if review_action is not None:
+        return review_action
+
     review_queue = _review_queue_payload(turn.message)
     if review_queue is not None:
         return {
@@ -72,8 +76,6 @@ def _review_queue_payload(message: str) -> dict[str, Any] | None:
         return None
     if not any(token in lower for token in ("show", "list", "what", "pending", "queue")):
         return None
-    if "memory" not in lower:
-        return None
 
     payload: dict[str, Any] = {"status": "pending"}
     if "accepted" in lower:
@@ -94,6 +96,50 @@ def _review_queue_payload(message: str) -> dict[str, Any] | None:
     elif "global" in lower:
         payload["scope"] = "global"
     return payload
+
+
+def _review_action_payload(message: str) -> dict[str, Any] | None:
+    review_id = _extract_review_id(message)
+    if review_id is None:
+        return None
+    lower = message.lower()
+
+    if any(token in lower for token in ("accept review", "approve review", "accept ", "approve ")):
+        payload = {"request_kind": "review_accept", "message": message, "review_accept": {"review_id": review_id}}
+        decision_note = _extract_decision_note(message)
+        if decision_note is not None:
+            payload["review_accept"]["decision_note"] = decision_note
+        return payload
+
+    if any(token in lower for token in ("reject review", "decline review", "reject ", "decline ")):
+        payload = {"request_kind": "review_reject", "message": message, "review_reject": {"review_id": review_id}}
+        decision_note = _extract_decision_note(message)
+        if decision_note is not None:
+            payload["review_reject"]["decision_note"] = decision_note
+        return payload
+
+    if any(token in lower for token in ("show review", "inspect review", "open review", "review ")):
+        return {
+            "request_kind": "review_detail",
+            "message": message,
+            "review": {"review_id": review_id},
+        }
+    return None
+
+
+def _extract_review_id(message: str) -> str | None:
+    match = re.search(r"\b(memory-suggestion-[a-z0-9]+)\b", message, re.IGNORECASE)
+    if match is None:
+        return None
+    return match.group(1)
+
+
+def _extract_decision_note(message: str) -> str | None:
+    match = re.search(r"\b(?:because|with note|note)\b[: ]+(.*)$", message, re.IGNORECASE)
+    if match is None:
+        return None
+    note = match.group(1).strip().strip(".")
+    return note or None
 
 
 def _has_supplier_attachment(attachments: tuple[PlannerAttachment, ...]) -> bool:

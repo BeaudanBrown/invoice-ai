@@ -112,6 +112,11 @@ Acceptance:
 
 - the operator can review and resolve memory and other gated actions from chat or a structured review client using one common contract
 
+Current progress:
+
+- the operator surface now supports review queue listing, review detail inspection, and accept/reject actions through the planner/orchestrator path
+- the current converged implementation is still memory-backed; broader approval types still need to adopt the same review contract
+
 ## Stage 5: Deployment And Verification
 
 Objective:
