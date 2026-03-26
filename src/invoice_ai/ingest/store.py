@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import json
 from pathlib import Path
 from typing import Any
 
@@ -149,6 +150,18 @@ class IngestStore:
             / request_id
         )
 
+    def load_record(self, *, record_dir: Path) -> dict[str, Any]:
+        resolved = record_dir
+        if not resolved.is_absolute():
+            resolved = self.ingest_dir / resolved
+        payload: dict[str, Any] = {"record_dir": str(resolved)}
+        for file_name in ("source.json", "extracted.json", "proposal.json", "result.json", "error.json"):
+            path = resolved / file_name
+            if not path.exists():
+                continue
+            payload[file_name[:-5]] = json.loads(path.read_text(encoding="utf-8"))
+        return payload
+
     def _upsert_index(
         self,
         *,
@@ -159,9 +172,16 @@ class IngestStore:
     ) -> None:
         if self.control_plane is None:
             return
+        existing_record = self.control_plane.get_ingest_index(ingest_id=request_id) or {}
         source_ref = dict(source.get("source_ref", source))
         extracted_invoice = dict(proposal.get("extracted_invoice", {}))
+        if not extracted_invoice and {"supplier_name", "lines"} <= set(proposal.keys()):
+            extracted_invoice = dict(proposal)
         normalized_invoice = dict(proposal.get("normalized_invoice", {}))
+        if not normalized_invoice and {"supplier", "invoice", "lines"} <= set(proposal.keys()):
+            normalized_invoice = dict(proposal)
+        normalized_supplier = dict(normalized_invoice.get("supplier", {}))
+        normalized_invoice_meta = dict(normalized_invoice.get("invoice", {}))
         purchase_invoice = dict(proposal.get("purchase_invoice", {}))
         doc_ref = dict(purchase_invoice.get("doc_ref", {}))
         self.control_plane.upsert_ingest_index(
@@ -170,18 +190,30 @@ class IngestStore:
             source_fingerprint=(
                 source_ref.get("source_hash")
                 or source_ref.get("source_fingerprint")
+                or existing_record.get("source_fingerprint")
             ),
             supplier_hint=(
-                normalized_invoice.get("supplier", {}) or extracted_invoice
-            ).get("supplier_name"),
+                normalized_supplier.get("supplier_name")
+                or extracted_invoice.get("supplier_name")
+            )
+            or existing_record.get("supplier_hint"),
             external_invoice_reference=(
                 extracted_invoice.get("supplier_invoice_ref")
+                or normalized_invoice_meta.get("supplier_invoice_ref")
                 or normalized_invoice.get("bill_no")
+                or existing_record.get("external_invoice_reference")
             ),
             linked_review_id=(
                 proposal.get("approval", {}) or {}
-            ).get("approval_id"),
-            linked_erp_doctype=None if not doc_ref else str(doc_ref.get("doctype")),
-            linked_erp_name=None if not doc_ref else str(doc_ref.get("name")),
+            ).get("approval_id")
+            or existing_record.get("linked_review_id"),
+            linked_erp_doctype=(
+                None if not doc_ref else str(doc_ref.get("doctype"))
+            )
+            or existing_record.get("linked_erp_doctype"),
+            linked_erp_name=(
+                None if not doc_ref else str(doc_ref.get("name"))
+            )
+            or existing_record.get("linked_erp_name"),
             record_dir=str(record_dir),
         )

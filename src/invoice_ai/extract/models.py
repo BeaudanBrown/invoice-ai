@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +38,16 @@ class DocumentSource:
         if path.is_absolute():
             return path
         return state_dir / path
+
+    def computed_hash(self, *, state_dir: Path) -> str | None:
+        if self.source_hash is not None:
+            return self.source_hash
+        if self.raw_text is not None:
+            return sha256(self.raw_text.encode("utf-8")).hexdigest()
+        resolved = self.resolved_path(state_dir=state_dir)
+        if resolved is None or not resolved.exists():
+            return None
+        return sha256(resolved.read_bytes()).hexdigest()
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -77,6 +88,7 @@ class ExtractionCandidate:
     lines: tuple[ExtractedInvoiceLine, ...]
     confidence: float
     warnings: tuple[str, ...] = field(default_factory=tuple)
+    anomalies: tuple[str, ...] = field(default_factory=tuple)
     extracted_text: str | None = None
 
     def as_extracted_invoice(self) -> dict[str, Any]:
@@ -94,6 +106,7 @@ class ExtractionCandidate:
             **self.as_extracted_invoice(),
             "confidence": self.confidence,
             "warnings": list(self.warnings),
+            "anomalies": list(self.anomalies),
             "extracted_text": self.extracted_text,
         }
 

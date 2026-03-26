@@ -97,8 +97,10 @@ The ingest layer lives under `src/invoice_ai/ingest/` and currently exposes:
 - `ingest.normalize_supplier_invoice`
 - `ingest.create_purchase_invoice_draft`
 - `ingest.process_supplier_document`
+- `ingest.reprocess_record`
 
 It can normalize supplier invoice input, stop for review when supplier/item matching is unresolved, and create draft `Purchase Invoice` records when the ERP path is safe.
+It now also computes source fingerprints, flags extraction anomalies, checks for duplicate ingests before unsafe writes, and can reprocess stored ingest records from disk.
 
 ### Quotes
 
@@ -164,7 +166,7 @@ The memory layer lives under `src/invoice_ai/memory/` and currently exposes:
 The current weak points are:
 
 - thin ERP semantic coverage outside the first quote and purchase-invoice slice
-- extraction quality is still narrow and confidence handling is basic
+- extraction quality is still narrower than it needs to be for repeated real use, even though anomalies, duplicate checks, and record reprocessing now exist
 - auth is not enforced yet even though the service shell is now structured for it
 - the new local job/event ledger is not yet exposed through a fuller operator API
 - no end-to-end approval actions through the operator surface yet

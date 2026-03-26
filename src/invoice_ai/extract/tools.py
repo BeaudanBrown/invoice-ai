@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -58,7 +59,7 @@ class ExtractToolExecutor:
             )
 
     def extract_supplier_invoice_from_document(self, request: ToolRequest) -> ToolResponse:
-        source = DocumentSource.from_payload(request.payload)
+        source = self._enriched_source(DocumentSource.from_payload(request.payload))
         try:
             text, method = self._extract_text(source)
         except (OSError, DoclingClientError, ValueError) as exc:
@@ -117,9 +118,10 @@ class ExtractToolExecutor:
                 data={
                     "source": source.as_dict(),
                     "extracted_invoice": candidate.as_dict(),
+                    "anomalies": list(candidate.anomalies),
                     "next_request": next_request,
                 },
-                warnings=list(candidate.warnings),
+                warnings=[*candidate.warnings, *candidate.anomalies],
                 approval=approval,
                 meta={"ingest_record_dir": str(record_dir), "extraction_method": method},
             )
@@ -133,13 +135,22 @@ class ExtractToolExecutor:
             data={
                 "source": source.as_dict(),
                 "extracted_invoice": candidate.as_dict(),
+                "anomalies": list(candidate.anomalies),
                 "next_request": next_request,
             },
-            warnings=list(candidate.warnings),
+            warnings=[*candidate.warnings, *candidate.anomalies],
             meta={"ingest_record_dir": str(record_dir), "extraction_method": method},
         )
         self.store.write_composed_result(record_dir=record_dir, result=response.as_dict())
         return response
+
+    def _enriched_source(self, source: DocumentSource) -> DocumentSource:
+        if source.source_hash is not None:
+            return source
+        return replace(
+            source,
+            source_hash=source.computed_hash(state_dir=self.config.paths.state_dir),
+        )
 
     def _extract_text(self, source: DocumentSource) -> tuple[str, str]:
         if source.raw_text is not None:

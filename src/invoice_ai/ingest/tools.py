@@ -27,13 +27,14 @@ class IngestToolExecutor:
         extract_executor: ExtractToolExecutor | None = None,
     ) -> None:
         self.config = config
+        self.control_plane = ControlPlaneStore.from_runtime_config(config)
         self.erp_client = erp_client
         self.erp_executor = erp_executor
         self.extract_executor = extract_executor
         self.normalizer = SupplierInvoiceNormalizer(erp_client)
         self.store = IngestStore(
             config.paths.ingest_dir,
-            control_plane=ControlPlaneStore.from_runtime_config(config),
+            control_plane=self.control_plane,
         )
 
     @classmethod
@@ -55,6 +56,7 @@ class IngestToolExecutor:
             "ingest.normalize_supplier_invoice": self.normalize_supplier_invoice,
             "ingest.create_purchase_invoice_draft": self.create_purchase_invoice_draft,
             "ingest.process_supplier_document": self.process_supplier_document,
+            "ingest.reprocess_record": self.reprocess_record,
         }
         handler = handlers.get(request.tool_name)
         if handler is None:
@@ -81,9 +83,20 @@ class IngestToolExecutor:
 
     def normalize_supplier_invoice(self, request: ToolRequest) -> ToolResponse:
         source = SupplierInvoiceInput.from_payload(request.request_id, request.payload)
-        normalized, record_dir = self._normalize_and_store(source=source, request_id=request.request_id)
+        normalized, record_dir = self._normalize_and_store(
+            source=source, request_id=request.request_id
+        )
+        duplicate_response = self._duplicate_response(
+            request=request,
+            source=source,
+            normalized=normalized,
+            record_dir=record_dir,
+        )
+        if duplicate_response is not None:
+            self._persist_composed_result(record_dir=record_dir, response=duplicate_response)
+            return duplicate_response
         if normalized["resolved"]:
-            return ToolResponse(
+            response = ToolResponse(
                 request_id=request.request_id,
                 tool_name=request.tool_name,
                 status="success",
@@ -96,12 +109,16 @@ class IngestToolExecutor:
                 },
                 meta={"ingest_record_dir": str(record_dir)},
             )
+            self._persist_composed_result(record_dir=record_dir, response=response)
+            return response
 
-        return self._approval_response(
+        response = self._approval_response(
             request=request,
             normalized=normalized,
             record_dir=record_dir,
         )
+        self._persist_composed_result(record_dir=record_dir, response=response)
+        return response
 
     def process_supplier_document(self, request: ToolRequest) -> ToolResponse:
         if self.extract_executor is None:
@@ -182,7 +199,18 @@ class IngestToolExecutor:
 
     def create_purchase_invoice_draft(self, request: ToolRequest) -> ToolResponse:
         source = SupplierInvoiceInput.from_payload(request.request_id, request.payload)
-        normalized, record_dir = self._normalize_and_store(source=source, request_id=request.request_id)
+        normalized, record_dir = self._normalize_and_store(
+            source=source, request_id=request.request_id
+        )
+        duplicate_response = self._duplicate_response(
+            request=request,
+            source=source,
+            normalized=normalized,
+            record_dir=record_dir,
+        )
+        if duplicate_response is not None:
+            self._persist_composed_result(record_dir=record_dir, response=duplicate_response)
+            return duplicate_response
         if not normalized["resolved"]:
             response = self._approval_response(
                 request=request,
@@ -279,6 +307,107 @@ class IngestToolExecutor:
         self._persist_composed_result(record_dir=record_dir, response=response)
         return response
 
+    def reprocess_record(self, request: ToolRequest) -> ToolResponse:
+        record_dir_value = request.payload.get("record_dir")
+        if not record_dir_value:
+            return ToolResponse(
+                request_id=request.request_id,
+                tool_name=request.tool_name,
+                status="validation_error",
+                errors=[
+                    {
+                        "code": "ingest.missing_record_dir",
+                        "message": "ingest.reprocess_record requires record_dir",
+                    }
+                ],
+            )
+
+        record = self.store.load_record(record_dir=Path(str(record_dir_value)))
+        source_record = dict(record.get("source", {})).get("source", {})
+        extracted_record = dict(record.get("extracted", {})).get("extracted", {})
+        overrides = dict(request.payload.get("overrides", {}))
+
+        if extracted_record.get("candidate"):
+            payload = {
+                "source_ref": {
+                    "source_type": source_record.get("source_type"),
+                    "source_path": source_record.get("source_path"),
+                    "source_hash": source_record.get("source_hash"),
+                },
+                "extracted_invoice": dict(extracted_record["candidate"]),
+                **overrides,
+            }
+            replay_request = ToolRequest(
+                request_id=request.request_id,
+                tool_name="ingest.create_purchase_invoice_draft",
+                dry_run=request.dry_run,
+                payload=payload,
+                conversation_context=request.conversation_context,
+            )
+            response = self.create_purchase_invoice_draft(replay_request)
+            return ToolResponse(
+                request_id=request.request_id,
+                tool_name=request.tool_name,
+                status=response.status,
+                data={
+                    "reprocessed_from": str(record["record_dir"]),
+                    "replay_mode": "extracted_invoice",
+                    "pipeline_response": response.as_dict(),
+                },
+                errors=response.errors,
+                warnings=response.warnings,
+                approval=response.approval,
+                meta=response.meta,
+            )
+
+        source_payload = {**source_record, **overrides}
+        if source_payload.get("supplier_name") and source_payload.get("lines"):
+            replay_request = ToolRequest(
+                request_id=request.request_id,
+                tool_name="ingest.create_purchase_invoice_draft",
+                dry_run=request.dry_run,
+                payload=source_payload,
+                conversation_context=request.conversation_context,
+            )
+            response = self.create_purchase_invoice_draft(replay_request)
+            return ToolResponse(
+                request_id=request.request_id,
+                tool_name=request.tool_name,
+                status=response.status,
+                data={
+                    "reprocessed_from": str(record["record_dir"]),
+                    "replay_mode": "supplier_invoice_input",
+                    "pipeline_response": response.as_dict(),
+                },
+                errors=response.errors,
+                warnings=response.warnings,
+                approval=response.approval,
+                meta=response.meta,
+            )
+
+        replay_request = ToolRequest(
+            request_id=request.request_id,
+            tool_name="ingest.process_supplier_document",
+            dry_run=request.dry_run,
+            payload=source_payload,
+            conversation_context=request.conversation_context,
+        )
+        response = self.process_supplier_document(replay_request)
+        return ToolResponse(
+            request_id=request.request_id,
+            tool_name=request.tool_name,
+            status=response.status,
+            data={
+                "reprocessed_from": str(record["record_dir"]),
+                "replay_mode": "document_source",
+                "pipeline_response": response.as_dict(),
+            },
+            errors=response.errors,
+            warnings=response.warnings,
+            approval=response.approval,
+            meta=response.meta,
+        )
+
     def _normalize_and_store(
         self,
         *,
@@ -346,6 +475,62 @@ class IngestToolExecutor:
             "conversation_context": request.conversation_context,
             "payload": payload or {},
         }
+
+    def _duplicate_response(
+        self,
+        *,
+        request: ToolRequest,
+        source: SupplierInvoiceInput,
+        normalized: dict[str, Any],
+        record_dir: Path,
+    ) -> ToolResponse | None:
+        supplier_hint = (
+            dict(normalized.get("supplier", {})).get("supplier_name") or source.supplier_name
+        )
+        external_invoice_reference = (
+            dict(normalized.get("invoice", {})).get("supplier_invoice_ref")
+            or source.supplier_invoice_ref
+        )
+        duplicates = self.control_plane.find_duplicate_ingests(
+            source_fingerprint=source.source_hash,
+            supplier_hint=supplier_hint,
+            external_invoice_reference=external_invoice_reference,
+            exclude_request_id=request.request_id,
+        )
+        if not duplicates:
+            return None
+
+        approval_id = f"approval-{uuid.uuid4().hex}"
+        return ToolResponse(
+            request_id=request.request_id,
+            tool_name=request.tool_name,
+            status="approval_required",
+            data={
+                "normalized_invoice": normalized,
+                "duplicate_candidates": duplicates,
+                "proposed_purchase_invoice_request": self._purchase_invoice_request_dict(
+                    request=request,
+                    payload=normalized.get("purchase_invoice_payload"),
+                    dry_run=True,
+                ),
+            },
+            warnings=["Possible duplicate supplier invoice detected"],
+            approval=ApprovalPayload(
+                approval_id=approval_id,
+                action="review_duplicate_supplier_invoice",
+                summary=(
+                    "Review possible duplicate supplier invoice before creating a draft purchase invoice"
+                ),
+                target={"doctype": "Purchase Invoice", "name": None},
+                proposed_changes={
+                    "duplicates": duplicates,
+                    "source_hash": source.source_hash,
+                    "supplier_invoice_ref": external_invoice_reference,
+                },
+                artifacts=approval_artifact_paths(self.config.paths.approvals_dir, approval_id),
+            ),
+            meta={"ingest_record_dir": str(record_dir)},
+        )
 
     def _persist_composed_result(
         self,

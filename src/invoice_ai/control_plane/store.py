@@ -544,6 +544,64 @@ class ControlPlaneStore:
                 ),
             )
 
+    def find_duplicate_ingests(
+        self,
+        *,
+        source_fingerprint: str | None = None,
+        supplier_hint: str | None = None,
+        external_invoice_reference: str | None = None,
+        exclude_request_id: str | None = None,
+        limit: int = 10,
+    ) -> list[dict[str, str | None]]:
+        clauses: list[str] = []
+        params: list[object] = []
+
+        if source_fingerprint is not None:
+            clauses.append("source_fingerprint = ?")
+            params.append(source_fingerprint)
+        if supplier_hint is not None and external_invoice_reference is not None:
+            clauses.append("(supplier_hint = ? AND external_invoice_reference = ?)")
+            params.extend([supplier_hint, external_invoice_reference])
+
+        if not clauses:
+            return []
+
+        query = """
+            SELECT ingest_id, request_id, source_fingerprint, supplier_hint,
+                   external_invoice_reference, linked_review_id, linked_erp_doctype,
+                   linked_erp_name, record_dir, updated_at
+            FROM ingest_index
+            WHERE ({where_clause})
+        """
+        if exclude_request_id is not None:
+            query += " AND request_id != ?"
+            params.append(exclude_request_id)
+        query += " ORDER BY updated_at DESC LIMIT ?"
+        params.append(limit)
+
+        with self._connect() as connection:
+            connection.row_factory = sqlite3.Row
+            rows = connection.execute(
+                query.format(where_clause=" OR ".join(clauses)),
+                tuple(params),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_ingest_index(self, *, ingest_id: str) -> dict[str, str | None] | None:
+        with self._connect() as connection:
+            connection.row_factory = sqlite3.Row
+            row = connection.execute(
+                """
+                SELECT ingest_id, request_id, source_fingerprint, supplier_hint,
+                       external_invoice_reference, linked_review_id, linked_erp_doctype,
+                       linked_erp_name, record_dir, updated_at
+                FROM ingest_index
+                WHERE ingest_id = ?
+                """,
+                (ingest_id,),
+            ).fetchone()
+        return None if row is None else dict(row)
+
     def upsert_memory_suggestion(
         self,
         *,

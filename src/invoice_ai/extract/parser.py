@@ -35,6 +35,7 @@ def parse_supplier_invoice_text(text: str) -> ExtractionCandidate:
     extracted_lines = tuple(_parse_lines(lines))
 
     warnings: list[str] = []
+    anomalies: list[str] = []
     confidence = 0.25
     if supplier_name:
         confidence += 0.2
@@ -60,6 +61,25 @@ def parse_supplier_invoice_text(text: str) -> ExtractionCandidate:
     if supplier_name is None and lines:
         supplier_name = lines[0]
         warnings.append("Fell back to the first non-empty line for supplier name")
+        anomalies.append("Supplier name fell back to the first non-empty line")
+
+    line_total = round(sum(line.amount for line in extracted_lines), 2)
+    grand_total = totals.get("grand_total")
+    if extracted_lines and grand_total is not None and abs(line_total - float(grand_total)) > 0.01:
+        anomalies.append(
+            f"Extracted line total {line_total:.2f} does not match invoice total {float(grand_total):.2f}"
+        )
+        confidence = max(confidence - 0.1, 0.0)
+    elif not extracted_lines and grand_total is not None:
+        anomalies.append("Invoice total was found but no line items were extracted")
+
+    for line in extracted_lines:
+        expected_amount = round(line.qty * line.rate, 2)
+        if abs(line.amount - expected_amount) > 0.01:
+            anomalies.append(
+                f"Line amount mismatch for '{line.description}': expected {expected_amount:.2f}, found {line.amount:.2f}"
+            )
+            confidence = max(confidence - 0.05, 0.0)
 
     return ExtractionCandidate(
         supplier_name=supplier_name,
@@ -70,6 +90,7 @@ def parse_supplier_invoice_text(text: str) -> ExtractionCandidate:
         lines=extracted_lines,
         confidence=min(round(confidence, 2), 1.0),
         warnings=tuple(dict.fromkeys(warnings)),
+        anomalies=tuple(dict.fromkeys(anomalies)),
         extracted_text=text,
     )
 
@@ -107,6 +128,7 @@ def _from_json_payload(payload: dict[str, Any]) -> ExtractionCandidate | None:
         lines=tuple(lines),
         confidence=float(extracted.get("confidence", 0.95)),
         warnings=tuple(str(item) for item in extracted.get("warnings", [])),
+        anomalies=tuple(str(item) for item in extracted.get("anomalies", [])),
         extracted_text=json.dumps(payload, indent=2, sort_keys=True),
     )
 

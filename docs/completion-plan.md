@@ -86,6 +86,13 @@ Acceptance:
 - the system can reliably stop unsafe ingests for review
 - ingest records clearly show extraction, normalization, ERP write, and attachment outcomes
 
+Current progress:
+
+- extraction results now include anomaly reporting alongside confidence and warnings
+- source-fingerprint duplicate checks now stop repeated ingests before unsafe ERP writes
+- ingest records can now be replayed through `ingest.reprocess_record`
+- remaining work in this stage is stronger matching/extraction quality and a broader duplicate strategy, not the absence of a duplicate/reprocess path
+
 ## Stage 4: Review And Memory Completion
 
 Objective:

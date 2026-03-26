@@ -21,7 +21,7 @@ Inherited completed work:
 - service API is still missing enforced auth and fuller operator review surfaces
 - request/job metadata exists now, but it is not yet exposed through a broader operator API
 - operator review flows are incomplete
-- extraction confidence and duplicate handling are still basic
+- extraction quality still needs to improve beyond the new anomaly/dedupe/reprocess baseline
 - deployment and verification are still mostly mock-driven
 
 ## Latest Completed Slice
@@ -129,3 +129,22 @@ Verification:
   - `invoices.create_draft` from an existing quotation
   - `invoices.revise_draft`
   - `planner.handle_turn` for quote-to-invoice conversion through the orchestrator
+
+Completed `coordinator-jdv.4` on 2026-03-26.
+
+Highlights:
+
+- added deterministic source fingerprinting for extracted supplier documents
+- added extraction anomaly reporting for line-total mismatches and similar document inconsistencies
+- added duplicate-ingest checks before unsafe purchase-invoice draft creation
+- added `ingest.reprocess_record` so stored ingest records can be replayed through the current pipeline
+- fixed ingest index preservation so duplicate checks retain source, supplier, and invoice-reference hints across stage writes
+
+Verification:
+
+- `nix shell .#python -c python -m compileall src`
+- temp-state runs covering:
+  - extraction anomaly reporting from raw text
+  - duplicate detection on repeated `ingest.normalize_supplier_invoice` requests
+  - record replay through `ingest.reprocess_record`
+  - ingest index metadata carrying source hash, supplier hint, and invoice reference
