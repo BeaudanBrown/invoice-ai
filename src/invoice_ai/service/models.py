@@ -106,3 +106,51 @@ class ReviewDetailResponse(InvoiceAIModel):
     review: ReviewRecord
     actions: tuple[ReviewActionRecord, ...] = Field(default_factory=tuple)
     artifacts: tuple[ArtifactRecord, ...] = Field(default_factory=tuple)
+
+
+class UITurnRequest(InvoiceAIModel):
+    request_id: str | None = None
+    message: str
+    defaults: dict[str, Any] = Field(default_factory=dict)
+    attachments: list[dict[str, Any]] = Field(default_factory=list)
+    conversation_context: dict[str, Any] = Field(default_factory=dict)
+    write_approval_artifacts: bool = True
+
+
+class UIArtifactView(InvoiceAIModel):
+    kind: str
+    label: str
+    file_name: str
+    content_type: str | None = None
+    url: str | None = None
+    download_url: str | None = None
+    available: bool = False
+
+
+class UIReviewView(InvoiceAIModel):
+    review_id: str
+    kind: str
+    status: str
+    summary: str
+    actions: tuple[str, ...] = Field(default_factory=tuple)
+    artifacts: tuple[UIArtifactView, ...] = Field(default_factory=tuple)
+
+
+class UISummaryView(InvoiceAIModel):
+    text: str
+    stage: str
+    status: str
+
+
+class UITurnResponse(InvoiceAIModel):
+    request_id: str
+    status: str
+    stage: str
+    summary: UISummaryView
+    conversation_state: dict[str, Any] = Field(default_factory=dict)
+    artifacts: tuple[UIArtifactView, ...] = Field(default_factory=tuple)
+    current_artifact: UIArtifactView | None = None
+    reviews: tuple[UIReviewView, ...] = Field(default_factory=tuple)
+    erp_refs: tuple[dict[str, Any], ...] = Field(default_factory=tuple)
+    warnings: tuple[str, ...] = Field(default_factory=tuple)
+    errors: tuple[dict[str, Any], ...] = Field(default_factory=tuple)

@@ -223,3 +223,39 @@ Verification:
   - confirmed quote drafting through planner/orchestrator
   - confirmed quote-to-invoice conversion through planner/orchestrator
   - confirmed supplier document intake through extraction, ingest, and draft purchase-invoice creation
+
+Completed `coordinator-jdv.6.1` on 2026-03-26.
+
+Highlights:
+
+- added the first dedicated UI-facing operator endpoint at `POST /api/ui/turn`
+- added authenticated artifact serving at `GET /api/artifacts/file/{relative_path}`
+- added a presenter layer that converts planner/orchestrator responses into deterministic UI summaries, review cards, ERP refs, and artifact links
+- chose browser-native speech recognition as the first STT path for the phone UI, keeping the backend text-only
+- documented the new UI-facing backend contract in `docs/operator-ui.md` and `docs/dev-testing.md`
+
+Verification:
+
+- `nix shell .#python -c python -m compileall src`
+- `nix flake check`
+- `nix run . -- dev-smoke-test`
+  - confirmed `POST /api/ui/turn` for quote creation, quote-to-invoice conversion, and supplier intake
+  - confirmed authenticated artifact download for the generated preview PDF
+
+Completed `coordinator-jdv.6.2` and `coordinator-jdv.6.3` on 2026-03-26.
+
+Highlights:
+
+- added the first installable PWA shell served directly by the FastAPI service
+- added browser-native speech recognition with transcript review/editing before send
+- added token-based setup, session-scoped chat history, current-draft pinning, and review/action cards
+- kept the backend text-only while making artifact open/download work through authenticated blob fetches in the browser
+- added manifest, service worker, and icon assets for home-screen installation
+
+Verification:
+
+- `nix shell .#python -c python -m compileall src`
+- `nix flake check`
+- `nix run . -- dev-smoke-test`
+  - confirmed the service serves `/`, `/manifest.webmanifest`, and the UI-backed operator path
+  - confirmed quote, invoice, and supplier flows still succeed through the new UI-facing endpoint

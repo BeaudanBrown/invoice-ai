@@ -1,0 +1,17 @@
+{
+  "name": "invoice-ai",
+  "short_name": "invoice-ai",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3efe4",
+  "theme_color": "#f3efe4",
+  "description": "Phone-first operator interface for drafting quotes and invoices.",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

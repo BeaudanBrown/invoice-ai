@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f3efe4" />
+    <title>invoice-ai</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Operator Console</p>
+          <h1>invoice-ai</h1>
+        </div>
+        <div class="topbar-actions">
+          <button id="install-button" class="ghost-button hidden" type="button">Install</button>
+          <span id="connection-badge" class="status-badge">Offline</span>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel setup-panel">
+          <details id="settings-panel">
+            <summary>Connection</summary>
+            <label>
+              Operator token
+              <input id="token-input" type="password" placeholder="Paste bearer token" autocomplete="off" />
+            </label>
+            <label>
+              Defaults JSON
+              <textarea id="defaults-input" rows="8" spellcheck="false" placeholder='{"quote": {...}}'></textarea>
+            </label>
+            <div class="inline-actions">
+              <button id="save-settings" type="button">Save</button>
+              <button id="test-connection" class="ghost-button" type="button">Test</button>
+            </div>
+            <p class="supporting-text">
+              Keep this simple for now. The token stays in local storage on this device, and defaults JSON is mainly useful for disposable dev stacks.
+            </p>
+          </details>
+        </section>
+
+        <section class="panel current-panel">
+          <div class="panel-heading">
+            <h2>Current Draft</h2>
+            <span id="draft-badge" class="draft-badge">No active draft</span>
+          </div>
+          <div id="current-artifact" class="current-artifact empty">
+            <p>No quote or invoice has been generated in this session yet.</p>
+          </div>
+        </section>
+
+        <section id="timeline" class="timeline" aria-live="polite"></section>
+      </main>
+
+      <footer class="composer-shell">
+        <div class="voice-status">
+          <span id="voice-indicator" class="status-dot"></span>
+          <span id="voice-copy">Voice input ready</span>
+        </div>
+        <label class="composer">
+          <textarea
+            id="message-input"
+            rows="3"
+            placeholder="Say or type a request. Example: Quote Acme for 3 hours and travel."
+          ></textarea>
+        </label>
+        <div class="composer-actions">
+          <button id="record-button" class="accent-button" type="button">Start recording</button>
+          <button id="send-button" type="button">Send</button>
+        </div>
+      </footer>
+    </div>
+
+    <template id="message-template">
+      <article class="message-card">
+        <header class="message-header">
+          <span class="message-role"></span>
+          <span class="message-meta"></span>
+        </header>
+        <div class="message-body"></div>
+      </article>
+    </template>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

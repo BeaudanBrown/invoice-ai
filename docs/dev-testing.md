@@ -6,6 +6,7 @@ The fastest local loops are:
 
 1. `nix run . -- dev-stack`
 2. `nix run . -- dev-smoke-test`
+3. open the printed `service_url` in a browser
 
 ## Disposable Dev Stack
 
@@ -41,6 +42,36 @@ curl -s \
 
 You can then drive planner/orchestrator flows over HTTP with fake data.
 
+For the UI-facing surface, use:
+
+```bash
+curl -s \
+  -H 'Authorization: Bearer dev-token' \
+  -H 'Content-Type: application/json' \
+  -X POST http://127.0.0.1:4310/api/ui/turn \
+  -d '{
+    "request_id": "ui-quote-1",
+    "message": "Quote Acme for 2 hours and travel",
+    "defaults": {
+      "quote": {
+        "company": "Test Company",
+        "customer": "CUST-ACME",
+        "customer_name": "Acme",
+        "currency": "AUD",
+        "labor_item_code": "LABOUR",
+        "labor_item_name": "Onsite Labour",
+        "travel_item_code": "TRAVEL",
+        "travel_item_name": "Travel Surcharge",
+        "travel_rate": 25.0
+      }
+    }
+  }'
+```
+
+That returns a summary plus artifact URLs suitable for the phone-first UI.
+
+The same service now also serves the UI shell directly at `/`, so after `dev-stack` you can open the printed `service_url` in a browser, paste the bearer token into the Connection panel, and use the app manually.
+
 ## One-Command Smoke Test
 
 Run:
@@ -52,9 +83,10 @@ nix run . -- dev-smoke-test
 This verifies the current mock-backed end-to-end path:
 
 - authenticated operator API startup
-- quote drafting
+- quote drafting through the UI-facing turn endpoint
 - quote-to-invoice draft conversion
 - supplier document intake through extraction, normalization, and draft purchase-invoice creation
+- authenticated artifact download for the generated preview PDF
 
 The command returns a JSON summary including the generated ERP refs and temp-state paths.
 
@@ -107,6 +139,29 @@ curl -s \
       }
     }
   }'
+```
+
+## Manual UI Artifact Download
+
+The UI-facing turn response includes artifact URLs such as:
+
+```json
+{
+  "current_artifact": {
+    "kind": "quote_preview_pdf",
+    "url": "/api/artifacts/file/artifacts/quotes/quote-acme-001/preview.pdf",
+    "download_url": "/api/artifacts/file/artifacts/quotes/quote-acme-001/preview.pdf?download=1"
+  }
+}
+```
+
+Fetch one with:
+
+```bash
+curl -L \
+  -H 'Authorization: Bearer dev-token' \
+  -o preview.pdf \
+  "http://127.0.0.1:4310/api/artifacts/file/artifacts/quotes/<draft-key>/preview.pdf?download=1"
 ```
 
 ## Current Fake-Data Story

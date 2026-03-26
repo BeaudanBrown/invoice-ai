@@ -18,7 +18,7 @@ Nix-native self-hosted AI invoicing workspace.
 - filesystem-backed approvals, revisions, and PDF preview artifacts
 - a local SQLite-backed control-plane metadata store for requests, jobs, reviews, artifacts, and idempotency indexes
 
-The current user-facing surface is still API-first. A phone-first installable operator UI is designed but not yet implemented.
+The repo now ships a minimal phone-first installable operator UI shell served by the FastAPI service. It is still early, but the product is no longer API-only.
 
 The repo is still incomplete as a product. The current stage is hardening and completion, not initial architecture discovery.
 
@@ -191,6 +191,8 @@ Current endpoints:
 - `GET /healthz`
 - `GET /api/runtime`
 - `POST /api/tools/run`
+- `POST /api/ui/turn`
+- `GET /api/artifacts/file/{relative_path}`
 - `GET /api/requests`
 - `GET /api/requests/{request_id}`
 - `GET /api/jobs`
@@ -201,6 +203,15 @@ Current endpoints:
 - `GET /openapi.json`
 
 `POST /api/tools/run` accepts the same JSON envelope used by `run-tool`. It may also include `write_approval_artifacts: true` at the top level to persist approval artifacts while executing the request.
+
+`POST /api/ui/turn` is the first UI-facing operator endpoint. It accepts a plain operator message plus session context and returns:
+
+- a deterministic summary sentence
+- current stage and status
+- active quote/invoice conversation state
+- artifact preview/download URLs
+- review cards
+- ERP refs
 
 All `/api/*` endpoints now require `Authorization: Bearer <token>`, where the token is loaded from `INVOICE_AI_OPERATOR_TOKENS_FILE`. The service also emits `X-Request-ID` on every response and records the authenticated operator id into the control-plane store.
 
@@ -220,7 +231,20 @@ That UI does not exist yet. The current implemented user-facing surface is still
 - `/docs`
 - `/openapi.json`
 
-The design for the upcoming UI lives in `docs/operator-ui.md`.
+The current UI shell is served from:
+
+- `GET /`
+- `GET /app.js`
+- `GET /app.css`
+- `GET /manifest.webmanifest`
+- `GET /sw.js`
+
+The design and current contract live in `docs/operator-ui.md`.
+
+The first supporting backend surface for that UI now exists through:
+
+- `POST /api/ui/turn`
+- `GET /api/artifacts/file/{relative_path}`
 
 The operator token file is JSON and currently has this shape:
 

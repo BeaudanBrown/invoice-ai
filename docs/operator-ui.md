@@ -54,6 +54,19 @@ The backend should continue to accept text only.
 
 The UI should not try to send raw audio to the current planner/orchestrator path.
 
+The first implementation should use browser-native speech recognition where available.
+
+Reason:
+
+- it is the fastest path to a usable phone-first prototype
+- it keeps the backend text-only
+- it avoids adding another hosted dependency before the UI loop is proven
+
+Known limitation:
+
+- recognition quality and availability will vary by browser and platform
+- a self-hosted STT path may still be needed later for consistency and offline/privacy guarantees
+
 ### 3. Session History Is Shallow
 
 The UI should keep one active drafting session, not a durable multi-week chat archive.
@@ -122,6 +135,30 @@ The PWA should include:
 - install metadata and icons
 
 Offline operation is not the goal, but installability is.
+
+### 7. Authentication Starts Simple
+
+The first UI should reuse the existing bearer-token operator auth.
+
+Reason:
+
+- the service already supports it
+- it is enough for initial local and NAS-hosted use
+- it avoids delaying the PWA on account/session plumbing
+
+Friendlier login/session UX can be layered on later without changing the first operator contract.
+
+### 8. Artifact Handling Should Prefer Browser/System Viewers
+
+Generated PDFs and review files do not need an elaborate in-app document viewer in v1.
+
+The UI should:
+
+- show the current artifact clearly
+- offer open/preview and download actions
+- allow the browser or system viewer to handle the actual file display
+
+This keeps the PWA simple while still supporting the phone-first “say something, get a PDF” loop.
 
 ## Intended User Experience
 
@@ -249,13 +286,21 @@ The UI requires several additional backend/API capabilities.
      - summary
      - stage
      - current active quote/invoice
-     - artifact refs
-     - review refs
+    - artifact refs
+    - review refs
 3. PWA static asset serving
    - HTML
    - JS/CSS
    - manifest
    - icons
+
+Current implementation progress:
+
+- `POST /api/ui/turn` now provides a UI-facing turn endpoint over `planner.handle_turn`
+- `GET /api/artifacts/file/{relative_path}` now provides authenticated artifact viewing/download for files under the runtime state tree
+- the UI response is now deterministic and presenter-backed rather than exposing raw tool payloads directly
+- the FastAPI service now serves a first installable PWA shell with a current-session chat surface, token setup, review cards, and artifact open/download actions
+- browser-native speech recognition is now the first implemented voice input path where the client platform exposes it
 
 ### Recommended
 

@@ -142,57 +142,57 @@ def serve_dev_stack(*, root: Path | None = None, service_port: int | None = None
 def run_dev_smoke_test(*, root: Path | None = None, service_port: int | None = None) -> dict[str, Any]:
     with DevStack(root=root, service_port=service_port) as info:
         headers = {"Authorization": f"Bearer {info.operator_token}"}
+        _http_text("GET", f"{info.service_url}/")
+        _http_json("GET", f"{info.service_url}/manifest.webmanifest", headers={})
         runtime = _http_json("GET", f"{info.service_url}/api/runtime", headers=headers)
         quote = _http_json(
             "POST",
-            f"{info.service_url}/api/tools/run",
+            f"{info.service_url}/api/ui/turn",
             headers=headers,
             payload={
                 "request_id": "dev-quote-1",
-                "tool_name": "planner.handle_turn",
-                "payload": {
-                    "message": "Quote Acme for 2 hours and travel",
-                    "defaults": dev_turn_defaults(),
-                },
+                "message": "Quote Acme for 2 hours and travel",
+                "defaults": dev_turn_defaults(),
             },
         )
-        active_quote = quote.get("data", {}).get("conversation_state", {}).get("active_quote", {})
+        active_quote = quote.get("conversation_state", {}).get("active_quote", {})
         invoice = _http_json(
             "POST",
-            f"{info.service_url}/api/tools/run",
+            f"{info.service_url}/api/ui/turn",
             headers=headers,
             payload={
                 "request_id": "dev-invoice-1",
-                "tool_name": "planner.handle_turn",
-                "payload": {
-                    "message": f"Invoice from quote {active_quote.get('quotation', '')}",
-                    "defaults": dev_turn_defaults(),
-                },
+                "message": f"Invoice from quote {active_quote.get('quotation', '')}",
+                "defaults": dev_turn_defaults(),
                 "conversation_context": {"active_quote": active_quote},
             },
         )
         supplier = _http_json(
             "POST",
-            f"{info.service_url}/api/tools/run",
+            f"{info.service_url}/api/ui/turn",
             headers=headers,
             payload={
                 "request_id": "dev-supplier-1",
-                "tool_name": "planner.handle_turn",
-                "payload": {
-                    "message": "Process this supplier invoice",
-                    "defaults": dev_turn_defaults(),
-                    "attachments": [
-                        {
-                            "kind": "supplier_invoice",
-                            "document_path": str(
-                                info.fixture_paths.sample_supplier_invoice_pdf
-                            ),
-                            "attach_source_file": True,
-                        }
-                    ],
-                },
+                "message": "Process this supplier invoice",
+                "defaults": dev_turn_defaults(),
+                "attachments": [
+                    {
+                        "kind": "supplier_invoice",
+                        "document_path": str(
+                            info.fixture_paths.sample_supplier_invoice_pdf
+                        ),
+                        "attach_source_file": True,
+                    }
+                ],
             },
         )
+        current_artifact_url = quote.get("current_artifact", {}).get("url")
+        if current_artifact_url:
+            _http_bytes(
+                "GET",
+                f"{info.service_url}{current_artifact_url}",
+                headers=headers,
+            )
         requests_index = _http_json(
             "GET",
             f"{info.service_url}/api/requests",
@@ -203,14 +203,14 @@ def run_dev_smoke_test(*, root: Path | None = None, service_port: int | None = N
             "fixture_paths": info.as_dict()["fixture_paths"],
             "runtime": runtime,
             "quote_status": quote.get("status"),
-            "quote_stage": quote.get("data", {}).get("stage"),
-            "quote_ref": quote.get("data", {}).get("erp_refs", []),
+            "quote_stage": quote.get("stage"),
+            "quote_ref": quote.get("erp_refs", []),
             "invoice_status": invoice.get("status"),
-            "invoice_stage": invoice.get("data", {}).get("stage"),
-            "invoice_ref": invoice.get("data", {}).get("erp_refs", []),
+            "invoice_stage": invoice.get("stage"),
+            "invoice_ref": invoice.get("erp_refs", []),
             "supplier_status": supplier.get("status"),
-            "supplier_stage": supplier.get("data", {}).get("stage"),
-            "supplier_ref": supplier.get("data", {}).get("erp_refs", []),
+            "supplier_stage": supplier.get("stage"),
+            "supplier_ref": supplier.get("erp_refs", []),
             "request_count": len(requests_index.get("requests", [])),
         }
 
@@ -247,3 +247,25 @@ def _http_json(
     req = request.Request(url, data=body, headers=request_headers, method=method)
     with request.urlopen(req, timeout=15) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def _http_bytes(
+    method: str,
+    url: str,
+    *,
+    headers: dict[str, str],
+) -> bytes:
+    req = request.Request(url, headers=headers, method=method)
+    with request.urlopen(req, timeout=15) as response:
+        return response.read()
+
+
+def _http_text(
+    method: str,
+    url: str,
+    *,
+    headers: dict[str, str] | None = None,
+) -> str:
+    req = request.Request(url, headers=headers or {}, method=method)
+    with request.urlopen(req, timeout=15) as response:
+        return response.read().decode("utf-8")

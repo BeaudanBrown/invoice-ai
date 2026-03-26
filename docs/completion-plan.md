@@ -167,7 +167,10 @@ Current progress:
 
 - the backend operator API exists
 - the planner/orchestrator path already supports quote, invoice, supplier-intake, and review flows
-- no actual user-facing UI exists yet
+- the first UI-facing API seam now exists through `POST /api/ui/turn`
+- authenticated artifact preview/download now exists through `GET /api/artifacts/file/{relative_path}`
+- a first installable PWA shell now exists, served by the FastAPI service with session-scoped chat history, token-based setup, and artifact/review cards
+- remaining work in this stage is voice-flow refinement, phone polish, and the gap between the minimal shell and a production-ready operator experience
 
 ## Prioritization
 

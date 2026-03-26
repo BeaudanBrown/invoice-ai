@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from pathlib import Path
 from typing import AsyncIterator
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import ValidationError
 import uvicorn
 
@@ -32,7 +33,10 @@ from .models import (
     RuntimeResponse,
     RuntimeServiceView,
     ToolRunRequest,
+    UITurnRequest,
+    UITurnResponse,
 )
+from .presenter import present_turn_response
 
 
 @dataclass(frozen=True)
@@ -145,6 +149,33 @@ def create_app(config: RuntimeConfig | None = None) -> FastAPI:
             port=state.config.service.port,
         )
 
+    @app.get("/", tags=["ui"])
+    async def operator_ui() -> FileResponse:
+        return _ui_static_response("index.html", media_type="text/html")
+
+    @app.get("/app.css", tags=["ui"])
+    async def operator_ui_css() -> FileResponse:
+        return _ui_static_response("app.css", media_type="text/css")
+
+    @app.get("/app.js", tags=["ui"])
+    async def operator_ui_js() -> FileResponse:
+        return _ui_static_response("app.js", media_type="text/javascript")
+
+    @app.get("/manifest.webmanifest", tags=["ui"])
+    async def operator_ui_manifest() -> FileResponse:
+        return _ui_static_response(
+            "manifest.webmanifest",
+            media_type="application/manifest+json",
+        )
+
+    @app.get("/sw.js", tags=["ui"])
+    async def operator_ui_sw() -> FileResponse:
+        return _ui_static_response("sw.js", media_type="text/javascript")
+
+    @app.get("/icon.svg", tags=["ui"])
+    async def operator_ui_icon() -> FileResponse:
+        return _ui_static_response("icon.svg", media_type="image/svg+xml")
+
     @app.get("/api/runtime", response_model=RuntimeResponse, tags=["runtime"])
     async def runtime(
         _operator: OperatorView = Depends(require_operator),
@@ -189,6 +220,39 @@ def create_app(config: RuntimeConfig | None = None) -> FastAPI:
         state: ServiceState = Depends(get_service_state),
     ) -> ToolResponse:
         return state.execute(payload, operator_id=operator.operator_id)
+
+    @app.post(
+        "/api/ui/turn",
+        response_model=UITurnResponse,
+        tags=["ui"],
+        responses={
+            401: {"model": ErrorResponse},
+            503: {"model": ErrorResponse},
+            400: {"model": ErrorResponse},
+            500: {"model": ErrorResponse},
+        },
+    )
+    async def ui_turn(
+        payload: UITurnRequest,
+        operator: OperatorView = Depends(require_operator),
+        state: ServiceState = Depends(get_service_state),
+    ) -> UITurnResponse:
+        request_id = payload.request_id or f"ui-turn-{uuid4().hex}"
+        response = state.execute(
+            ToolRunRequest(
+                request_id=request_id,
+                tool_name="planner.handle_turn",
+                payload={
+                    "message": payload.message,
+                    "defaults": payload.defaults,
+                    "attachments": payload.attachments,
+                },
+                conversation_context=payload.conversation_context,
+                write_approval_artifacts=payload.write_approval_artifacts,
+            ),
+            operator_id=operator.operator_id,
+        )
+        return present_turn_response(config=state.config, response=response)
 
     @app.get(
         "/api/requests",
@@ -339,6 +403,33 @@ def create_app(config: RuntimeConfig | None = None) -> FastAPI:
             ),
         )
 
+    @app.get(
+        "/api/artifacts/file/{relative_path:path}",
+        tags=["artifacts"],
+        responses={
+            401: {"model": ErrorResponse},
+            404: {"model": ErrorResponse},
+            503: {"model": ErrorResponse},
+        },
+    )
+    async def get_artifact_file(
+        relative_path: str,
+        _operator: OperatorView = Depends(require_operator),
+        state: ServiceState = Depends(get_service_state),
+        download: bool = Query(default=False),
+    ) -> FileResponse:
+        artifact_path = _resolve_artifact_file(
+            config=state.config,
+            relative_path=relative_path,
+        )
+        if artifact_path is None:
+            raise HTTPException(status_code=404, detail="Artifact not found")
+        return FileResponse(
+            artifact_path,
+            filename=artifact_path.name,
+            content_disposition_type="attachment" if download else "inline",
+        )
+
     return app
 
 
@@ -372,6 +463,44 @@ def _bearer_token(authorization: str | None) -> str | None:
     if scheme.lower() != "bearer" or not token.strip():
         return None
     return token.strip()
+
+
+def _resolve_artifact_file(
+    *,
+    config: RuntimeConfig,
+    relative_path: str,
+) -> Path | None:
+    candidate = (config.paths.state_dir / relative_path).resolve()
+    if not candidate.exists() or not candidate.is_file():
+        return None
+
+    for root in (
+        config.paths.approvals_dir,
+        config.paths.artifacts_dir,
+        config.paths.documents_dir,
+        config.paths.ingest_dir,
+        config.paths.memory_dir,
+        config.paths.revisions_dir,
+    ):
+        try:
+            candidate.relative_to(root.resolve())
+            return candidate
+        except ValueError:
+            continue
+    return None
+
+
+def _ui_static_response(filename: str, *, media_type: str) -> FileResponse:
+    path = _ui_static_path(filename)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"UI asset not found: {filename}")
+    return FileResponse(path, media_type=media_type)
+
+
+def _ui_static_path(filename: str) -> Path:
+    return (
+        Path(__file__).resolve().parent.parent / "ui" / "static" / filename
+    )
 
 
 def serve_http(config: RuntimeConfig | None = None) -> None:
