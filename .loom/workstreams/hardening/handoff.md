@@ -40,3 +40,4 @@ Use the hardening Beads epic to drive:
 - foundation context remains useful for historical decisions, but active work should anchor on the hardening docs and Beads epic
 - the current architectural review is in `docs/architecture-review-2026-03.md`
 - the current completion roadmap is in `docs/completion-plan.md`
+- the concrete service/store/schema decisions are in `docs/control-plane-hardening.md`

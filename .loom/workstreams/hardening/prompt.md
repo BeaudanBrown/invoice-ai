@@ -7,10 +7,11 @@ Read first:
 3. `docs/architecture.md`
 4. `docs/architecture-review-2026-03.md`
 5. `docs/completion-plan.md`
-6. `docs/foundation-spec.md`
-7. `docs/memory.md`
-8. `.loom/workstreams/hardening/context.md`
-9. `.loom/workstreams/hardening/handoff.md`
+6. `docs/control-plane-hardening.md`
+7. `docs/foundation-spec.md`
+8. `docs/memory.md`
+9. `.loom/workstreams/hardening/context.md`
+10. `.loom/workstreams/hardening/handoff.md`
 
 Goal:
 

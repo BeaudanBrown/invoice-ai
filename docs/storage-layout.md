@@ -21,6 +21,7 @@ The purpose of this layout is to keep mutable operational state out of git while
 
 Recommended top-level directories:
 
+- `/var/lib/invoice-ai/control-plane.sqlite3`
 - `/var/lib/invoice-ai/memory`
 - `/var/lib/invoice-ai/ingest`
 - `/var/lib/invoice-ai/approvals`
@@ -29,6 +30,33 @@ Recommended top-level directories:
 - `/var/lib/invoice-ai/jobs`
 - `/var/lib/invoice-ai/events`
 - `/var/lib/invoice-ai/cache`
+
+## Control-Plane Store
+
+Path:
+
+- `/var/lib/invoice-ai/control-plane.sqlite3`
+
+Purpose:
+
+- keep local operational metadata queryable without turning the filesystem tree into the only index
+
+Examples:
+
+- request ids
+- job state
+- job events
+- review records and actions
+- idempotency keys
+- artifact indexes
+- ingest indexes
+- memory suggestion indexes
+
+Retention policy:
+
+- durable by default
+- backed up with the rest of `/var/lib/invoice-ai`
+- compacted deliberately rather than implicitly
 
 ## Memory
 
@@ -241,6 +269,7 @@ Retention policy:
 
 The NixOS module should expose `stateDir` as the root and provide stable defaults for:
 
+- control-plane store path
 - memory directory
 - ingest directory
 - approvals directory

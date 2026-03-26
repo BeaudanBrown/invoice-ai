@@ -20,17 +20,21 @@ Objective:
 
 Required outcomes:
 
+- `FastAPI`-based operator API
 - authenticated operator API
 - request and job identifiers
+- local SQLite-backed control-plane store
 - persistent audit/event log
 - idempotency keys for ERP write actions
 - review queue inspection and action endpoints through the main operator surface
+- stricter typed request, response, and store schemas
 
 Acceptance:
 
 - the operator surface can inspect and act on review items without dropping to raw tool calls
 - write actions are traceable and replay-safe
 - long-running operations have stable job state instead of only synchronous responses
+- the service boundary no longer depends on the stdlib HTTP server
 
 ## Stage 2: ERP Surface Completion
 

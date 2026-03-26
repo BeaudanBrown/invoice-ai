@@ -60,6 +60,13 @@ The service in `src/invoice_ai/service/http.py` is still a thin tool-execution A
 
 This is the biggest runtime weakness.
 
+The concrete hardening direction for this section is now:
+
+- keep Python for v1
+- replace the service shell with `FastAPI`
+- add a local SQLite-backed control-plane store
+- tighten typed boundary models instead of relying on freeform dict traffic
+
 ### 2. Sales-Invoice Path Is Missing
 
 The repo can draft quotations and ingest supplier purchase invoices, but it still cannot complete the main outbound invoice story on the accounts-receivable side.
@@ -119,6 +126,8 @@ The control plane should stop behaving like a generic tool runner and start beha
 - event logs
 - stable references for approvals and artifacts
 
+The local metadata store for this should be SQLite-backed rather than purely filesystem-shaped.
+
 ### Decision 3: Complete The Business Surface Before Making Planning More Clever
 
 The next major business completion step should be sales-invoice support, not more planner sophistication.
@@ -144,6 +153,19 @@ The control plane should use:
 - deterministic extraction where possible
 - model assistance where helpful
 - explicit uncertainty fields rather than silent best-effort writes
+
+### Decision 6: Tighten Schema Discipline Instead Of Rewriting Languages
+
+The next assurance step should be stricter boundary modeling rather than a language rewrite.
+
+The current plan is:
+
+- keep Python for v1
+- move the operator API to `FastAPI`
+- introduce typed request, response, and persistence models
+- reduce freeform dict traffic across module boundaries
+
+See `docs/control-plane-hardening.md`.
 
 ## Implementation Consequences
 

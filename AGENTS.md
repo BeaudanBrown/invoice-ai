@@ -9,9 +9,10 @@ This repository is a Nix-native project for building a self-hosted AI-assisted i
 3. `docs/architecture.md`
 4. `docs/architecture-review-2026-03.md`
 5. `docs/completion-plan.md`
-6. `docs/decisions/foundation-open-questions.md`
-7. `.loom/workstreams/<workstream>/context.md`
-8. `.loom/workstreams/<workstream>/handoff.md`
+6. `docs/control-plane-hardening.md`
+7. `docs/decisions/foundation-open-questions.md`
+8. `.loom/workstreams/<workstream>/context.md`
+9. `.loom/workstreams/<workstream>/handoff.md`
 
 ## Repository Shape
 

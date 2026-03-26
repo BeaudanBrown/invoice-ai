@@ -22,6 +22,13 @@ Take the existing `invoice-ai` scaffold and turn it into a hardened, completion-
 5. extraction and ingest need better confidence, dedupe, and reprocessing behavior
 6. the repo still needs a real `nix-dotfiles` integration and end-to-end verification path
 
+## Current Hardening Decisions
+
+- keep Python for v1
+- replace the stdlib HTTP shell with `FastAPI`
+- add a local SQLite-backed control-plane store for requests, jobs, reviews, idempotency keys, and artifact indexes
+- tighten schema discipline at API, tool, ERP-command, and persistence boundaries
+
 ## Primary Docs
 
 - `AGENTS.md`
@@ -29,6 +36,7 @@ Take the existing `invoice-ai` scaffold and turn it into a hardened, completion-
 - `docs/architecture.md`
 - `docs/architecture-review-2026-03.md`
 - `docs/completion-plan.md`
+- `docs/control-plane-hardening.md`
 - `docs/foundation-spec.md`
 - `docs/erpnext-entity-map.md`
 - `docs/erp-tool-contract.md`
