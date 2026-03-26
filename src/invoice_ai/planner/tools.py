@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pydantic import ValidationError
+
 from ..approvals.store import ApprovalStore
 from ..config import RuntimeConfig
 from ..erp.schemas import ToolRequest, ToolResponse
@@ -50,7 +52,7 @@ class PlannerToolExecutor:
         )
         try:
             outcome = self.engine.plan(turn)
-        except PlannerParseError as exc:
+        except (PlannerParseError, ValidationError, ValueError) as exc:
             return ToolResponse(
                 request_id=request.request_id,
                 tool_name=request.tool_name,

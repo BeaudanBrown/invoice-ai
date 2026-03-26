@@ -1,24 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any
 
+from pydantic import Field, model_validator
 
-def _optional_string(value: Any) -> str | None:
-    if value is None:
-        return None
-    text = str(value).strip()
-    return text or None
+from ..modeling import InvoiceAIModel
 
 
-@dataclass(frozen=True)
-class PlannerAttachment:
-    kind: str
-    payload: dict[str, Any]
+class PlannerAttachment(InvoiceAIModel):
+    kind: str = "reference"
+    payload: dict[str, Any] = Field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> "PlannerAttachment":
-        kind = _optional_string(payload.get("kind")) or "reference"
+        kind = str(payload.get("kind") or "reference").strip() or "reference"
         cleaned = dict(payload)
         cleaned.pop("kind", None)
         return cls(kind=kind, payload=cleaned)
@@ -27,13 +22,12 @@ class PlannerAttachment:
         return {"kind": self.kind, **self.payload}
 
 
-@dataclass(frozen=True)
-class PlannerTurn:
+class PlannerTurn(InvoiceAIModel):
     request_id: str
     message: str
-    attachments: tuple[PlannerAttachment, ...] = field(default_factory=tuple)
-    defaults: dict[str, Any] = field(default_factory=dict)
-    conversation_context: dict[str, Any] = field(default_factory=dict)
+    attachments: tuple[PlannerAttachment, ...] = Field(default_factory=tuple)
+    defaults: dict[str, Any] = Field(default_factory=dict)
+    conversation_context: dict[str, Any] = Field(default_factory=dict)
 
     @classmethod
     def from_payload(
@@ -46,14 +40,19 @@ class PlannerTurn:
         attachments = tuple(
             PlannerAttachment.from_dict(item) for item in payload.get("attachments", [])
         )
-        defaults = dict(payload.get("defaults", {}))
         return cls(
             request_id=request_id,
             message=str(payload.get("message") or payload.get("operator_message") or ""),
             attachments=attachments,
-            defaults=defaults,
+            defaults=dict(payload.get("defaults", {})),
             conversation_context=dict(conversation_context or {}),
         )
+
+    @model_validator(mode="after")
+    def _ensure_message(self) -> "PlannerTurn":
+        if not self.message.strip():
+            raise ValueError("Planner turn requires a non-empty message")
+        return self
 
     def active_quote(self) -> dict[str, Any]:
         active = self.conversation_context.get("active_quote")

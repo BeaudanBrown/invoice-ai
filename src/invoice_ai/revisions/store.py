@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-import json
 from pathlib import Path
 from typing import Any
+
+from ..persistence import LatestQuotationRevisionRecord, QuotationRevisionRecord
 
 
 class RevisionStore:
@@ -30,48 +31,43 @@ class RevisionStore:
         revision_id = f"revision-{revision_number:04d}"
         timestamp = datetime.utcnow().isoformat() + "Z"
 
-        payload = {
-            "revision_id": revision_id,
-            "revision_number": revision_number,
-            "draft_key": draft_key,
-            "quotation": quotation,
-            "revision_type": revision_type,
-            "summary": summary,
-            "created_at": timestamp,
-            "request_payload": request_payload,
-            "context": context,
-            "quotation_doc": quotation_doc,
-            "preview_path": None if preview_path is None else str(preview_path),
-        }
+        payload = QuotationRevisionRecord(
+            revision_id=revision_id,
+            revision_number=revision_number,
+            draft_key=draft_key,
+            quotation=quotation,
+            revision_type=revision_type,
+            summary=summary,
+            created_at=timestamp,
+            request_payload=request_payload,
+            context=context,
+            quotation_doc=quotation_doc,
+            preview_path=None if preview_path is None else str(preview_path),
+        )
 
         revision_path = target_dir / f"{revision_id}.json"
-        revision_path.write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        revision_path.write_text(payload.to_json_text() + "\n", encoding="utf-8")
 
         latest_path = target_dir / "latest.json"
         latest_path.write_text(
-            json.dumps(
-                {
-                    "draft_key": draft_key,
-                    "quotation": quotation,
-                    "latest_revision_id": revision_id,
-                    "latest_revision_number": revision_number,
-                    "updated_at": timestamp,
-                    "latest_revision_path": str(revision_path),
-                    "preview_path": None if preview_path is None else str(preview_path),
-                },
-                indent=2,
-                sort_keys=True,
-            )
+            LatestQuotationRevisionRecord(
+                draft_key=draft_key,
+                quotation=quotation,
+                latest_revision_id=revision_id,
+                latest_revision_number=revision_number,
+                updated_at=timestamp,
+                latest_revision_path=str(revision_path),
+                preview_path=None if preview_path is None else str(preview_path),
+            ).to_json_text()
             + "\n",
             encoding="utf-8",
         )
-        return payload
+        return payload.as_dict()
 
     def load_latest_quotation_revision(self, draft_key: str) -> dict[str, Any]:
         latest_path = self.revisions_dir / "quotations" / draft_key / "latest.json"
         if not latest_path.exists():
             raise FileNotFoundError(f"No stored quotation revisions for draft key {draft_key}")
-        return json.loads(latest_path.read_text(encoding="utf-8"))
+        return LatestQuotationRevisionRecord.model_validate_json(
+            latest_path.read_text(encoding="utf-8")
+        ).as_dict()

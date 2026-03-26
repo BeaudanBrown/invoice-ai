@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from ..config import RuntimeConfig
 from ..erp.schemas import ApprovalPayload, ToolRequest, ToolResponse, approval_artifact_paths
 from ..ingest.store import IngestStore
@@ -41,7 +43,15 @@ class ExtractToolExecutor:
                     }
                 ],
             )
-        return handler(request)
+        try:
+            return handler(request)
+        except (ValidationError, ValueError) as exc:
+            return ToolResponse(
+                request_id=request.request_id,
+                tool_name=request.tool_name,
+                status="validation_error",
+                errors=[{"code": "extract.bad_request", "message": str(exc)}],
+            )
 
     def extract_supplier_invoice_from_document(self, request: ToolRequest) -> ToolResponse:
         source = DocumentSource.from_payload(request.payload)

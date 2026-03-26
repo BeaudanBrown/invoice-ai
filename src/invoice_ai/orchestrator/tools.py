@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from pydantic import ValidationError
+
 from ..config import RuntimeConfig
 from ..erp.schemas import ToolRequest, ToolResponse
 from ..ingest.tools import IngestToolExecutor
@@ -48,7 +50,7 @@ class OrchestratorToolExecutor:
                 request.payload,
                 conversation_context=request.conversation_context,
             )
-        except ValueError as exc:
+        except (ValidationError, ValueError) as exc:
             return ToolResponse(
                 request_id=request.request_id,
                 tool_name=request.tool_name,

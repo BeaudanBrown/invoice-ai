@@ -190,6 +190,7 @@ The immediate project direction is:
 - `docs/architecture-review-2026-03.md`
 - `docs/completion-plan.md`
 - `docs/control-plane-hardening.md`
+- `docs/schema-conventions.md`
 - `docs/foundation-spec.md`
 - `docs/erpnext-entity-map.md`
 - `docs/erp-tool-contract.md`

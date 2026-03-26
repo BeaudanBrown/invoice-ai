@@ -13,13 +13,19 @@
         "aarch64-linux"
       ];
 
-      perSystem = { pkgs, ... }: {
+      perSystem = { pkgs, ... }: let
+        python = pkgs.python3.withPackages (ps: with ps; [
+          pydantic
+        ]);
+      in {
+        packages.python = python;
+
         packages.default = pkgs.writeShellApplication {
           name = "invoice-ai";
-          runtimeInputs = [ pkgs.python3 ];
+          runtimeInputs = [ python ];
           text = ''
             export PYTHONPATH="${./src}:''${PYTHONPATH:-}"
-            exec python3 ${./bin/invoice-ai} "$@"
+            exec ${python}/bin/python3 ${./bin/invoice-ai} "$@"
           '';
         };
 
@@ -29,7 +35,7 @@
             just
             nil
             nixfmt
-            python3
+            python
           ];
         };
       };

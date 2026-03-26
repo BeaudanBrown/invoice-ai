@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Any
 import uuid
 
+from pydantic import ValidationError
+
 from ..config import RuntimeConfig
 from ..erp.client import ERPNextClient
 from ..erp.schemas import ApprovalPayload, ToolRequest, ToolResponse, approval_artifact_paths
@@ -63,7 +65,15 @@ class IngestToolExecutor:
                     }
                 ],
             )
-        return handler(request)
+        try:
+            return handler(request)
+        except (ValidationError, ValueError) as exc:
+            return ToolResponse(
+                request_id=request.request_id,
+                tool_name=request.tool_name,
+                status="validation_error",
+                errors=[{"code": "ingest.bad_request", "message": str(exc)}],
+            )
 
     def normalize_supplier_invoice(self, request: ToolRequest) -> ToolResponse:
         source = SupplierInvoiceInput.from_payload(request.request_id, request.payload)

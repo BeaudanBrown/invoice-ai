@@ -210,6 +210,8 @@ The simplest workable split is:
 
 The current repo already has dataclass- and model-shaped code in places. The hardening step should standardize the boundary models instead of letting multiple patterns keep drifting.
 
+The current repository conventions for this now live in `docs/schema-conventions.md`.
+
 ## Why This Helps Assurance
 
 Stricter schemas improve assurance more directly than a language rewrite would right now because they:

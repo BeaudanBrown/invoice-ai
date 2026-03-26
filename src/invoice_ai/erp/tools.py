@@ -7,7 +7,24 @@ import uuid
 
 from ..config import RuntimeConfig
 from .client import ERPNextClient, ERPNextClientError
-from .schemas import ToolRequest, ToolResponse, ApprovalPayload, approval_artifact_paths
+from .commands import (
+    AttachFileCommand,
+    CreateDraftPurchaseInvoiceCommand,
+    CreateDraftQuotationCommand,
+    GetDocCommand,
+    LinkedContextCommand,
+    ListDocsCommand,
+    PricingContextCommand,
+    UpdateDraftQuotationCommand,
+)
+from .schemas import (
+    ApprovalPayload,
+    ToolError,
+    ToolExecutionStatus,
+    ToolRequest,
+    ToolResponse,
+    approval_artifact_paths,
+)
 
 
 @dataclass
@@ -35,12 +52,12 @@ class ERPToolExecutor:
             return ToolResponse(
                 request_id=request.request_id,
                 tool_name=request.tool_name,
-                status="blocked",
+                status=ToolExecutionStatus.BLOCKED,
                 errors=[
-                    {
-                        "code": "erp.unsupported_tool",
-                        "message": f"Unsupported semantic ERP tool: {request.tool_name}",
-                    }
+                    ToolError(
+                        code="erp.unsupported_tool",
+                        message=f"Unsupported semantic ERP tool: {request.tool_name}",
+                    )
                 ],
             )
 
@@ -50,14 +67,14 @@ class ERPToolExecutor:
             return ToolResponse(
                 request_id=request.request_id,
                 tool_name=request.tool_name,
-                status="validation_error",
+                status=ToolExecutionStatus.VALIDATION_ERROR,
                 errors=[
-                    {
-                        "code": "erp.client_error",
-                        "message": str(exc),
-                        "status_code": exc.status_code,
-                        "details": exc.body,
-                    }
+                    ToolError(
+                        code="erp.client_error",
+                        message=str(exc),
+                        status_code=exc.status_code,
+                        details=exc.body,
+                    )
                 ],
                 meta={"retryable": True},
             )
@@ -65,20 +82,18 @@ class ERPToolExecutor:
             return ToolResponse(
                 request_id=request.request_id,
                 tool_name=request.tool_name,
-                status="validation_error",
+                status=ToolExecutionStatus.VALIDATION_ERROR,
                 errors=[
-                    {
-                        "code": "erp.bad_request",
-                        "message": str(exc),
-                    }
+                    ToolError(code="erp.bad_request", message=str(exc))
                 ],
                 meta={"retryable": True},
             )
 
     def get_doc(self, request: ToolRequest) -> ToolResponse:
-        doctype = str(request.payload["doctype"])
-        name = str(request.payload["name"])
-        fields = request.payload.get("fields")
+        command = GetDocCommand.model_validate(request.payload)
+        doctype = command.doctype
+        name = command.name
+        fields = command.fields
         doc = self.client.get_doc(doctype, name)
         if fields:
             doc = {field: doc.get(field) for field in fields}
@@ -87,19 +102,21 @@ class ERPToolExecutor:
         return self._success(request, {"doc": doc})
 
     def list_docs(self, request: ToolRequest) -> ToolResponse:
+        command = ListDocsCommand.model_validate(request.payload)
         docs = self.client.list_docs(
-            str(request.payload["doctype"]),
-            filters=request.payload.get("filters"),
-            fields=request.payload.get("fields"),
-            order_by=request.payload.get("order_by"),
-            limit=int(request.payload.get("limit", 20)),
+            command.doctype,
+            filters=command.filters,
+            fields=command.fields or None,
+            order_by=command.order_by,
+            limit=command.limit,
         )
         return self._success(request, {"docs": docs})
 
     def get_linked_context(self, request: ToolRequest) -> ToolResponse:
-        subject = dict(request.payload["subject"])
-        include = list(request.payload.get("include", []))
-        limit = int(request.payload.get("limit_per_relation", 10))
+        command = LinkedContextCommand.model_validate(request.payload)
+        subject = command.subject.as_dict()
+        include = list(command.include)
+        limit = command.limit_per_relation
         linked: dict[str, Any] = {}
 
         subject_name = str(subject["name"])
@@ -139,7 +156,7 @@ class ERPToolExecutor:
             )
         if "pricing_context" in include:
             linked["pricing_context"] = self._pricing_context(
-                items=request.payload.get("items", []),
+                items=command.items,
                 customer=subject_name if subject_doctype == "Customer" else None,
                 supplier=subject_name if subject_doctype == "Supplier" else None,
                 limit=limit,
@@ -154,19 +171,18 @@ class ERPToolExecutor:
         )
 
     def get_pricing_context(self, request: ToolRequest) -> ToolResponse:
-        items = list(request.payload.get("items", []))
-        customer = request.payload.get("customer")
-        supplier = request.payload.get("supplier")
+        command = PricingContextCommand.model_validate(request.payload)
         data = self._pricing_context(
-            items=items,
-            customer=customer,
-            supplier=supplier,
+            items=command.items,
+            customer=command.customer,
+            supplier=command.supplier,
             limit=10,
         )
         return self._success(request, data)
 
     def create_draft_quotation(self, request: ToolRequest) -> ToolResponse:
-        doc = self._quotation_payload(request.payload)
+        command = CreateDraftQuotationCommand.model_validate(request.payload)
+        doc = self._quotation_payload(command)
         if request.dry_run:
             return self._success(
                 request,
@@ -186,19 +202,20 @@ class ERPToolExecutor:
         )
 
     def update_draft_quotation(self, request: ToolRequest) -> ToolResponse:
-        quotation = str(request.payload["quotation"])
-        patch = dict(request.payload["patch"])
+        command = UpdateDraftQuotationCommand.model_validate(request.payload)
+        quotation = command.quotation
+        patch = command.patch
         existing = self.client.get_doc("Quotation", quotation)
         if int(existing.get("docstatus", 0)) != 0:
             return ToolResponse(
                 request_id=request.request_id,
                 tool_name=request.tool_name,
-                status="blocked",
+                status=ToolExecutionStatus.BLOCKED,
                 errors=[
-                    {
-                        "code": "erp.non_draft_document",
-                        "message": f"Quotation {quotation} is not in draft state",
-                    }
+                    ToolError(
+                        code="erp.non_draft_document",
+                        message=f"Quotation {quotation} is not in draft state",
+                    )
                 ],
                 meta={"retryable": False},
             )
@@ -223,7 +240,8 @@ class ERPToolExecutor:
         )
 
     def create_draft_purchase_invoice(self, request: ToolRequest) -> ToolResponse:
-        supplier = request.payload.get("supplier")
+        command = CreateDraftPurchaseInvoiceCommand.model_validate(request.payload)
+        supplier = command.supplier
         if not supplier:
             return self._approval_required(
                 request,
@@ -236,9 +254,9 @@ class ERPToolExecutor:
 
         doc = {
             "supplier": supplier,
-            "bill_no": request.payload.get("bill_no"),
-            "posting_date": request.payload.get("posting_date"),
-            "items": request.payload.get("items", []),
+            "bill_no": command.bill_no,
+            "posting_date": command.posting_date,
+            "items": command.items,
         }
         if request.dry_run:
             return self._success(
@@ -260,19 +278,17 @@ class ERPToolExecutor:
         )
 
     def attach_file(self, request: ToolRequest) -> ToolResponse:
-        target = dict(request.payload["target"])
-        path = request.payload.get("source_path")
-        if not path:
-            raise ValueError("attach_file requires source_path")
-        source_path = Path(path)
+        command = AttachFileCommand.model_validate(request.payload)
+        target = command.target.as_dict()
+        source_path = Path(command.source_path)
         if not source_path.is_absolute():
             source_path = self.config.paths.state_dir / source_path
         attachment = self.client.attach_file(
-            target_doctype=str(target["doctype"]),
-            target_name=str(target["name"]),
+            target_doctype=command.target.doctype,
+            target_name=str(command.target.name),
             source_path=source_path,
-            file_name=str(request.payload.get("file_name") or "attachment.bin"),
-            is_private=bool(request.payload.get("is_private", True)),
+            file_name=str(command.file_name or "attachment.bin"),
+            is_private=command.is_private,
         )
         return self._success(
             request,
@@ -293,7 +309,7 @@ class ERPToolExecutor:
         return ToolResponse(
             request_id=request.request_id,
             tool_name=request.tool_name,
-            status="success",
+            status=ToolExecutionStatus.SUCCESS,
             data=data,
             warnings=warnings or [],
             meta=meta or {},
@@ -321,20 +337,20 @@ class ERPToolExecutor:
         return ToolResponse(
             request_id=request.request_id,
             tool_name=request.tool_name,
-            status="approval_required",
+            status=ToolExecutionStatus.APPROVAL_REQUIRED,
             warnings=warnings,
             approval=approval,
         )
 
-    def _quotation_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
+    def _quotation_payload(self, command: CreateDraftQuotationCommand) -> dict[str, Any]:
         doc = {
-            "party_name": payload["customer"],
+            "party_name": command.customer,
             "quotation_to": "Customer",
-            "company": payload["company"],
-            "currency": payload["currency"],
-            "items": payload.get("items", []),
+            "company": command.company,
+            "currency": command.currency,
+            "items": command.items,
         }
-        narrative = payload.get("narrative", {})
+        narrative = command.narrative
         if "intro" in narrative:
             doc["remarks"] = narrative["intro"]
         if "notes" in narrative:

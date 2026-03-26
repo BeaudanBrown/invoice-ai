@@ -4,6 +4,8 @@ import argparse
 import json
 import sys
 
+from pydantic import ValidationError
+
 from .approvals.store import ApprovalStore
 from .artifacts.models import QuotePreview
 from .artifacts.pdf import QuotePreviewRenderer
@@ -89,7 +91,10 @@ def handle_init_paths(_args: argparse.Namespace) -> int:
 
 def handle_run_tool(args: argparse.Namespace) -> int:
     payload = _read_request_payload(args.request_file)
-    request = ToolRequest.from_dict(payload)
+    try:
+        request = ToolRequest.from_dict(payload)
+    except ValidationError as exc:
+        raise ValueError(str(exc)) from exc
     config = RuntimeConfig.from_env()
     executor = _tool_executor_for(request.tool_name, config)
     response = executor.execute(request)
@@ -145,9 +150,13 @@ def handle_serve_http(_args: argparse.Namespace) -> int:
 
 def _read_request_payload(path: str) -> dict[str, object]:
     if path == "-":
-        return json.load(sys.stdin)
-    with open(path, "r", encoding="utf-8") as handle:
-        return json.load(handle)
+        payload = json.load(sys.stdin)
+    else:
+        with open(path, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    if not isinstance(payload, dict):
+        raise ValueError("Request payload must be a JSON object")
+    return payload
 
 
 def _tool_executor_for(tool_name: str, config: RuntimeConfig) -> object:

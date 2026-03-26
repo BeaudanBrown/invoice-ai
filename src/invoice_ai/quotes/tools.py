@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from pydantic import ValidationError
+
 from ..artifacts.pdf import QuotePreviewRenderer
 from ..config import RuntimeConfig
 from ..erp.schemas import ToolRequest, ToolResponse
@@ -43,7 +45,15 @@ class QuoteToolExecutor:
                     }
                 ],
             )
-        return handler(request)
+        try:
+            return handler(request)
+        except (ValidationError, ValueError) as exc:
+            return ToolResponse(
+                request_id=request.request_id,
+                tool_name=request.tool_name,
+                status="validation_error",
+                errors=[{"code": "quotes.bad_request", "message": str(exc)}],
+            )
 
     def prepare_context(self, request: ToolRequest) -> ToolResponse:
         draft_request = QuoteDraftRequest.from_payload(request.request_id, request.payload)

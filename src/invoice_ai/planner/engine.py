@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any
 
+from pydantic import Field
+
 from ..config import RuntimeConfig
+from ..modeling import InvoiceAIModel
 from ..memory.store import MemoryStore
 from .models import PlannerTurn
 from .ollama import OllamaPlannerAssistant, PlannerOllamaError
@@ -11,14 +13,13 @@ from .parser import PlannerParseError, plan_operator_request
 from .suggestions import infer_memory_suggestions
 
 
-@dataclass(frozen=True)
-class PlannerOutcome:
+class PlannerOutcome(InvoiceAIModel):
     operator_request: dict[str, Any]
     planning_source: str
     memory_context: dict[str, Any]
-    memory_suggestions: tuple[dict[str, Any], ...] = field(default_factory=tuple)
-    warnings: tuple[str, ...] = field(default_factory=tuple)
-    model_details: dict[str, Any] = field(default_factory=dict)
+    memory_suggestions: tuple[dict[str, Any], ...] = Field(default_factory=tuple)
+    warnings: tuple[str, ...] = Field(default_factory=tuple)
+    model_details: dict[str, Any] = Field(default_factory=dict)
 
 
 class PlannerEngine:

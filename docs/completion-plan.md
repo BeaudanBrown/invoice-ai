@@ -29,6 +29,11 @@ Required outcomes:
 - review queue inspection and action endpoints through the main operator surface
 - stricter typed request, response, and store schemas
 
+Current progress:
+
+- the schema hardening pass is complete, with `Pydantic` boundary models documented in `docs/schema-conventions.md`
+- the next control-plane step is the SQLite-backed metadata store
+
 Acceptance:
 
 - the operator surface can inspect and act on review items without dropping to raw tool calls

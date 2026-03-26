@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
-from typing import Any
+
+from pydantic import ValidationError
 
 from ..approvals.store import ApprovalStore
 from ..config import RuntimeConfig
@@ -16,6 +17,7 @@ from ..memory.tools import MemoryToolExecutor
 from ..orchestrator.tools import OrchestratorToolExecutor
 from ..planner.tools import PlannerToolExecutor
 from ..quotes.tools import QuoteToolExecutor
+from .models import ErrorResponse, HealthResponse, RuntimeDependencyView, RuntimeResponse, RuntimeServiceView, ToolRunRequest
 
 
 @dataclass(frozen=True)
@@ -24,11 +26,11 @@ class ToolExecutionContext:
 
     def execute(
         self,
-        payload: dict[str, Any],
+        payload: ToolRunRequest,
         *,
         write_approval_artifacts: bool,
-    ) -> dict[str, Any]:
-        request = ToolRequest.from_dict(payload)
+    ) -> dict[str, object]:
+        request = payload.tool_request()
         response = _tool_executor_for(request.tool_name, self.config).execute(request)
         if write_approval_artifacts and response.approval is not None:
             ApprovalStore(self.config.paths.approvals_dir).write(response)
@@ -53,12 +55,12 @@ class InvoiceAIRequestHandler(BaseHTTPRequestHandler):
         if self.path == "/healthz":
             self._json_response(
                 HTTPStatus.OK,
-                {
-                    "status": "ok",
-                    "service": "invoice-ai",
-                    "listen_address": self.server.runtime_config.service.listen_address,
-                    "port": self.server.runtime_config.service.port,
-                },
+                HealthResponse(
+                    status="ok",
+                    service="invoice-ai",
+                    listen_address=self.server.runtime_config.service.listen_address,
+                    port=self.server.runtime_config.service.port,
+                ).as_dict(),
             )
             return
 
@@ -66,66 +68,63 @@ class InvoiceAIRequestHandler(BaseHTTPRequestHandler):
             config = self.server.runtime_config
             self._json_response(
                 HTTPStatus.OK,
-                {
-                    "service": {
-                        "listen_address": config.service.listen_address,
-                        "port": config.service.port,
-                        "public_url": config.service.public_url,
-                        "host_name": config.service.host_name,
-                        "base_url": config.service.base_url(),
-                    },
-                    "paths": config.paths.as_json(),
-                    "dependencies": {
-                        "erpnext_url": config.dependencies.erpnext_url,
-                        "ollama_url": config.dependencies.ollama_url,
-                        "docling_url": config.dependencies.docling_url,
-                        "n8n_url": config.dependencies.n8n_url,
-                        "erpnext_credentials_file_present": (
+                RuntimeResponse(
+                    service=RuntimeServiceView(
+                        listen_address=config.service.listen_address,
+                        port=config.service.port,
+                        public_url=config.service.public_url,
+                        host_name=config.service.host_name,
+                        base_url=config.service.base_url(),
+                    ),
+                    paths=config.paths.as_json(),
+                    dependencies=RuntimeDependencyView(
+                        erpnext_url=config.dependencies.erpnext_url,
+                        ollama_url=config.dependencies.ollama_url,
+                        docling_url=config.dependencies.docling_url,
+                        n8n_url=config.dependencies.n8n_url,
+                        erpnext_credentials_file_present=(
                             config.dependencies.erpnext_credentials_file is not None
                         ),
-                    },
-                },
+                    ),
+                ).as_dict(),
             )
             return
 
         self._json_response(
             HTTPStatus.NOT_FOUND,
-            {"error": "not_found", "message": f"Unhandled path: {self.path}"},
+            ErrorResponse(error="not_found", message=f"Unhandled path: {self.path}").as_dict(),
         )
 
     def do_POST(self) -> None:
         if self.path != "/api/tools/run":
             self._json_response(
                 HTTPStatus.NOT_FOUND,
-                {"error": "not_found", "message": f"Unhandled path: {self.path}"},
+                ErrorResponse(error="not_found", message=f"Unhandled path: {self.path}").as_dict(),
             )
             return
 
         try:
             payload = self._read_json_body()
-            write_approval_artifacts = bool(
-                payload.pop("write_approval_artifacts", False)
-            )
             result = self.server.tool_context.execute(
                 payload,
-                write_approval_artifacts=write_approval_artifacts,
+                write_approval_artifacts=payload.write_approval_artifacts,
             )
-        except ValueError as exc:
+        except (ValidationError, ValueError) as exc:
             self._json_response(
                 HTTPStatus.BAD_REQUEST,
-                {"error": "bad_request", "message": str(exc)},
+                ErrorResponse(error="bad_request", message=str(exc)).as_dict(),
             )
             return
         except Exception as exc:  # pragma: no cover - defensive server seam
             self._json_response(
                 HTTPStatus.INTERNAL_SERVER_ERROR,
-                {"error": "internal_error", "message": str(exc)},
+                ErrorResponse(error="internal_error", message=str(exc)).as_dict(),
             )
             return
 
         self._json_response(HTTPStatus.OK, result)
 
-    def _read_json_body(self) -> dict[str, Any]:
+    def _read_json_body(self) -> ToolRunRequest:
         length = int(self.headers.get("Content-Length", "0"))
         if length <= 0:
             raise ValueError("Request body is required")
@@ -133,9 +132,9 @@ class InvoiceAIRequestHandler(BaseHTTPRequestHandler):
         payload = json.loads(raw.decode("utf-8"))
         if not isinstance(payload, dict):
             raise ValueError("Request body must be a JSON object")
-        return payload
+        return ToolRunRequest.model_validate(payload)
 
-    def _json_response(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
+    def _json_response(self, status: HTTPStatus, payload: dict[str, object]) -> None:
         body = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
         self.send_response(int(status))
         self.send_header("Content-Type", "application/json")

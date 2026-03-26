@@ -1,93 +1,73 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 import json
 
+from pydantic import Field
 
-@dataclass(frozen=True)
-class ToolRequest:
-    request_id: str
-    tool_name: str
-    dry_run: bool
-    payload: dict[str, Any]
-    conversation_context: dict[str, Any] = field(default_factory=dict)
-
-    @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> "ToolRequest":
-        return cls(
-            request_id=str(payload["request_id"]),
-            tool_name=str(payload["tool_name"]),
-            dry_run=bool(payload.get("dry_run", False)),
-            payload=dict(payload.get("payload", {})),
-            conversation_context=dict(payload.get("conversation_context", {})),
-        )
-
-    @classmethod
-    def from_json_text(cls, payload: str) -> "ToolRequest":
-        return cls.from_dict(json.loads(payload))
+from ..modeling import InvoiceAIModel
 
 
-@dataclass(frozen=True)
-class ApprovalArtifactPaths:
-    summary_markdown_path: str | None
-    request_json_path: str | None
-    diff_json_path: str | None
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "summary_markdown_path": self.summary_markdown_path,
-            "request_json_path": self.request_json_path,
-            "diff_json_path": self.diff_json_path,
-        }
+class ToolExecutionStatus(StrEnum):
+    SUCCESS = "success"
+    BLOCKED = "blocked"
+    VALIDATION_ERROR = "validation_error"
+    APPROVAL_REQUIRED = "approval_required"
+    NOT_FOUND = "not_found"
 
 
-@dataclass(frozen=True)
-class ApprovalPayload:
+class ApprovalArtifactPaths(InvoiceAIModel):
+    summary_markdown_path: str | None = None
+    request_json_path: str | None = None
+    diff_json_path: str | None = None
+
+
+class ToolError(InvoiceAIModel):
+    code: str
+    message: str
+    status_code: int | None = None
+    details: dict[str, Any] | None = None
+
+
+class ApprovalPayload(InvoiceAIModel):
     approval_id: str
     action: str
     summary: str
-    target: dict[str, Any]
-    proposed_changes: dict[str, Any]
+    target: dict[str, Any] = Field(default_factory=dict)
+    proposed_changes: dict[str, Any] = Field(default_factory=dict)
     artifacts: ApprovalArtifactPaths
 
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "approval_id": self.approval_id,
-            "action": self.action,
-            "summary": self.summary,
-            "target": self.target,
-            "proposed_changes": self.proposed_changes,
-            "artifacts": self.artifacts.as_dict(),
-        }
 
-
-@dataclass(frozen=True)
-class ToolResponse:
+class ToolRequest(InvoiceAIModel):
     request_id: str
     tool_name: str
-    status: str
-    data: dict[str, Any] = field(default_factory=dict)
-    errors: list[dict[str, Any]] = field(default_factory=list)
-    warnings: list[str] = field(default_factory=list)
+    dry_run: bool = False
+    payload: dict[str, Any] = Field(default_factory=dict)
+    conversation_context: dict[str, Any] = Field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "ToolRequest":
+        return cls.model_validate(payload)
+
+    @classmethod
+    def from_json_text(cls, payload: str) -> "ToolRequest":
+        parsed = json.loads(payload)
+        if not isinstance(parsed, dict):
+            raise ValueError("Tool request JSON must decode to an object")
+        return cls.from_dict(parsed)
+
+
+class ToolResponse(InvoiceAIModel):
+    request_id: str
+    tool_name: str
+    status: ToolExecutionStatus
+    data: dict[str, Any] = Field(default_factory=dict)
+    errors: list[ToolError] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
     approval: ApprovalPayload | None = None
-    meta: dict[str, Any] = field(default_factory=dict)
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "request_id": self.request_id,
-            "tool_name": self.tool_name,
-            "status": self.status,
-            "data": self.data,
-            "errors": self.errors,
-            "warnings": self.warnings,
-            "approval": None if self.approval is None else self.approval.as_dict(),
-            "meta": self.meta,
-        }
-
-    def to_json_text(self) -> str:
-        return json.dumps(self.as_dict(), indent=2, sort_keys=True)
+    meta: dict[str, Any] = Field(default_factory=dict)
 
 
 def approval_artifact_paths(root: Path, approval_id: str) -> ApprovalArtifactPaths:

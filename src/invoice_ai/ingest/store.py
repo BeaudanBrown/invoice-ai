@@ -1,9 +1,16 @@
 from __future__ import annotations
 
 from datetime import datetime
-import json
 from pathlib import Path
 from typing import Any
+
+from ..persistence import (
+    IngestComposedResultRecord,
+    IngestExtractedRecord,
+    IngestProcessedRecord,
+    IngestRejectedRecord,
+    IngestSourceRecord,
+)
 
 
 class IngestStore:
@@ -19,14 +26,16 @@ class IngestStore:
     ) -> Path:
         record_dir = self._record_dir("processed", request_id)
         record_dir.mkdir(parents=True, exist_ok=True)
+        processed = IngestProcessedRecord(
+            request_id=request_id,
+            source=source,
+            proposal=normalized,
+        )
         (record_dir / "source.json").write_text(
-            json.dumps(source, indent=2, sort_keys=True) + "\n",
+            IngestSourceRecord(request_id=request_id, source=source).to_json_text() + "\n",
             encoding="utf-8",
         )
-        (record_dir / "proposal.json").write_text(
-            json.dumps(normalized, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        (record_dir / "proposal.json").write_text(processed.to_json_text() + "\n", encoding="utf-8")
         return record_dir
 
     def write_extracted(
@@ -38,12 +47,17 @@ class IngestStore:
     ) -> Path:
         record_dir = self._record_dir("processed", request_id)
         record_dir.mkdir(parents=True, exist_ok=True)
+        extracted_record = IngestExtractedRecord(
+            request_id=request_id,
+            source=source,
+            extracted=extracted,
+        )
         (record_dir / "source.json").write_text(
-            json.dumps(source, indent=2, sort_keys=True) + "\n",
+            IngestSourceRecord(request_id=request_id, source=source).to_json_text() + "\n",
             encoding="utf-8",
         )
         (record_dir / "extracted.json").write_text(
-            json.dumps(extracted, indent=2, sort_keys=True) + "\n",
+            extracted_record.to_json_text() + "\n",
             encoding="utf-8",
         )
         return record_dir
@@ -56,8 +70,15 @@ class IngestStore:
     ) -> Path:
         record_dir.mkdir(parents=True, exist_ok=True)
         output_path = record_dir / "result.json"
+        request_id = str(result.get("request_id") or record_dir.name)
         output_path.write_text(
-            json.dumps(result, indent=2, sort_keys=True) + "\n",
+            IngestComposedResultRecord.model_validate(
+                {
+                    "request_id": request_id,
+                    "result": result,
+                }
+            ).to_json_text()
+            + "\n",
             encoding="utf-8",
         )
         return output_path
@@ -71,12 +92,17 @@ class IngestStore:
     ) -> Path:
         record_dir = self._record_dir("rejected", request_id)
         record_dir.mkdir(parents=True, exist_ok=True)
+        rejected_record = IngestRejectedRecord(
+            request_id=request_id,
+            source=source,
+            error_summary=error_summary,
+        )
         (record_dir / "source.json").write_text(
-            json.dumps(source, indent=2, sort_keys=True) + "\n",
+            IngestSourceRecord(request_id=request_id, source=source).to_json_text() + "\n",
             encoding="utf-8",
         )
         (record_dir / "error.json").write_text(
-            json.dumps(error_summary, indent=2, sort_keys=True) + "\n",
+            rejected_record.to_json_text() + "\n",
             encoding="utf-8",
         )
         return record_dir
