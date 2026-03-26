@@ -59,6 +59,7 @@ class ServiceConfig:
     port: int
     public_url: str | None
     host_name: str | None
+    operator_tokens_file: Path | None
 
     def base_url(self) -> str:
         if self.public_url is not None:
@@ -81,6 +82,7 @@ class RuntimeConfig:
                 port=_read_int("INVOICE_AI_PORT", 4310),
                 public_url=_read_env("INVOICE_AI_PUBLIC_URL"),
                 host_name=_read_env("INVOICE_AI_HOST_NAME"),
+                operator_tokens_file=_read_path("INVOICE_AI_OPERATOR_TOKENS_FILE"),
             ),
             paths=paths,
             dependencies=DependencyEndpoints(
@@ -102,6 +104,11 @@ class RuntimeConfig:
         payload["paths"] = self.paths.as_json()
         payload["dependencies"] = self.dependencies.as_json()
         payload["service"]["base_url"] = self.service.base_url()
+        payload["service"]["operator_tokens_file"] = (
+            str(self.service.operator_tokens_file)
+            if self.service.operator_tokens_file is not None
+            else None
+        )
         return payload
 
     def to_json_text(self) -> str:

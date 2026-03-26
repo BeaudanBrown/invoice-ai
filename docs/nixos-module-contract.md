@@ -45,6 +45,7 @@ The repo should export a stable module namespace:
 - `services.invoice-ai.listenAddress`
 - `services.invoice-ai.port`
 - `services.invoice-ai.publicUrl`
+- `services.invoice-ai.operatorAuth.tokensFile`
 - `services.invoice-ai.stateDir`
 - `services.invoice-ai.documentsDir`
 - `services.invoice-ai.memoryDir`
@@ -118,6 +119,12 @@ Current endpoints:
 - `GET /healthz`
 - `GET /api/runtime`
 - `POST /api/tools/run`
+- `GET /api/requests`
+- `GET /api/requests/{request_id}`
+- `GET /api/jobs`
+- `GET /api/jobs/{job_id}`
+- `GET /api/reviews`
+- `GET /api/reviews/{review_id}`
 - `GET /docs`
 - `GET /openapi.json`
 
@@ -154,9 +161,14 @@ The module should prefer one environment file path owned by the host:
 
 - `services.invoice-ai.environmentFile`
 
+The operator API also expects a host-provided bearer token file:
+
+- `services.invoice-ai.operatorAuth.tokensFile`
+
 That file can hold or point to:
 
 - ERPNext API token
+- operator bearer tokens for the FastAPI surface
 - future service credentials
 
 The repo should define the contract; `nix-dotfiles` should provide the actual secret material.

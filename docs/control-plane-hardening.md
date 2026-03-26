@@ -57,7 +57,8 @@ The current implementation target for this decision is:
 - `uvicorn` as the local ASGI server
 - dependency-injected runtime state
 - request-id middleware
-- optional operator identity injection at the HTTP boundary
+- bearer-token operator authentication from a host-provided token file
+- authenticated request, job, and review inspection endpoints
 
 ## Control-Plane Store Decision
 
@@ -109,6 +110,7 @@ The current implementation now covers:
 - ingest indexes tied to record directories and linked ERP refs where present
 - memory suggestion indexes
 - ERP write-style idempotency fingerprints
+- authenticated operator-facing query access to requests, jobs, events, reviews, and artifacts
 
 It should not own:
 

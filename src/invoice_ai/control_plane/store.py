@@ -172,6 +172,91 @@ class ControlPlaneStore:
         finally:
             connection.close()
 
+    @staticmethod
+    def _request_record_from_row(row: sqlite3.Row) -> RequestRecord:
+        return RequestRecord(
+            request_id=str(row["request_id"]),
+            source=RequestSource(str(row["source"])),
+            tool_name=str(row["tool_name"]),
+            operator_id=None if row["operator_id"] is None else str(row["operator_id"]),
+            dry_run=bool(row["dry_run"]),
+            request_body_hash=str(row["request_body_hash"]),
+            request_body=json.loads(str(row["request_body_json"])),
+            status=RequestLifecycleStatus(str(row["status"])),
+            created_at=str(row["created_at"]),
+            finished_at=None if row["finished_at"] is None else str(row["finished_at"]),
+            response_body_hash=(
+                None
+                if row["response_body_hash"] is None
+                else str(row["response_body_hash"])
+            ),
+            error_count=int(row["error_count"]),
+            warning_count=int(row["warning_count"]),
+        )
+
+    @staticmethod
+    def _job_record_from_row(row: sqlite3.Row) -> JobRecord:
+        return JobRecord(
+            job_id=str(row["job_id"]),
+            request_id=str(row["request_id"]),
+            job_kind=str(row["job_kind"]),
+            status=JobStatus(str(row["status"])),
+            started_at=str(row["started_at"]),
+            finished_at=None if row["finished_at"] is None else str(row["finished_at"]),
+            summary=json.loads(str(row["summary_json"])),
+        )
+
+    @staticmethod
+    def _job_event_record_from_row(row: sqlite3.Row) -> JobEventRecord:
+        return JobEventRecord(
+            event_id=str(row["event_id"]),
+            job_id=str(row["job_id"]),
+            request_id=str(row["request_id"]),
+            event_type=str(row["event_type"]),
+            payload=json.loads(str(row["payload_json"])),
+            created_at=str(row["created_at"]),
+        )
+
+    @staticmethod
+    def _review_record_from_row(row: sqlite3.Row) -> ReviewRecord:
+        return ReviewRecord(
+            review_id=str(row["review_id"]),
+            request_id=None if row["request_id"] is None else str(row["request_id"]),
+            review_kind=str(row["review_kind"]),
+            status=ReviewStatus(str(row["status"])),
+            target=json.loads(str(row["target_json"])),
+            target_summary=(
+                None if row["target_summary"] is None else str(row["target_summary"])
+            ),
+            artifact_dir=None if row["artifact_dir"] is None else str(row["artifact_dir"]),
+            created_at=str(row["created_at"]),
+            updated_at=str(row["updated_at"]),
+        )
+
+    @staticmethod
+    def _review_action_record_from_row(row: sqlite3.Row) -> ReviewActionRecord:
+        return ReviewActionRecord(
+            action_id=str(row["action_id"]),
+            review_id=str(row["review_id"]),
+            action_type=str(row["action_type"]),
+            operator_id=None if row["operator_id"] is None else str(row["operator_id"]),
+            note=None if row["note"] is None else str(row["note"]),
+            created_at=str(row["created_at"]),
+        )
+
+    @staticmethod
+    def _artifact_record_from_row(row: sqlite3.Row) -> ArtifactRecord:
+        return ArtifactRecord(
+            artifact_id=str(row["artifact_id"]),
+            parent_kind=str(row["parent_kind"]),
+            parent_id=str(row["parent_id"]),
+            request_id=None if row["request_id"] is None else str(row["request_id"]),
+            artifact_kind=str(row["artifact_kind"]),
+            path=str(row["path"]),
+            content_hash=None if row["content_hash"] is None else str(row["content_hash"]),
+            created_at=str(row["created_at"]),
+        )
+
     def record_request_start(
         self,
         *,
@@ -638,3 +723,202 @@ class ControlPlaneStore:
                     record.updated_at,
                 ),
             )
+
+    def list_requests(
+        self,
+        *,
+        limit: int = 50,
+        status: RequestLifecycleStatus | None = None,
+        tool_name: str | None = None,
+        operator_id: str | None = None,
+    ) -> tuple[RequestRecord, ...]:
+        clauses: list[str] = []
+        params: list[object] = []
+        if status is not None:
+            clauses.append("status = ?")
+            params.append(str(status))
+        if tool_name is not None:
+            clauses.append("tool_name = ?")
+            params.append(tool_name)
+        if operator_id is not None:
+            clauses.append("operator_id = ?")
+            params.append(operator_id)
+
+        query = """
+            SELECT request_id, source, tool_name, operator_id, dry_run, request_body_hash,
+                   request_body_json, status, created_at, finished_at, response_body_hash,
+                   error_count, warning_count
+            FROM requests
+        """
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+
+        with self._connect() as connection:
+            connection.row_factory = sqlite3.Row
+            rows = connection.execute(query, tuple(params)).fetchall()
+        return tuple(self._request_record_from_row(row) for row in rows)
+
+    def get_request(self, *, request_id: str) -> RequestRecord | None:
+        with self._connect() as connection:
+            connection.row_factory = sqlite3.Row
+            row = connection.execute(
+                """
+                SELECT request_id, source, tool_name, operator_id, dry_run, request_body_hash,
+                       request_body_json, status, created_at, finished_at, response_body_hash,
+                       error_count, warning_count
+                FROM requests
+                WHERE request_id = ?
+                """,
+                (request_id,),
+            ).fetchone()
+        return None if row is None else self._request_record_from_row(row)
+
+    def list_jobs(
+        self,
+        *,
+        limit: int = 50,
+        status: JobStatus | None = None,
+        job_kind: str | None = None,
+        request_id: str | None = None,
+    ) -> tuple[JobRecord, ...]:
+        clauses: list[str] = []
+        params: list[object] = []
+        if status is not None:
+            clauses.append("status = ?")
+            params.append(str(status))
+        if job_kind is not None:
+            clauses.append("job_kind = ?")
+            params.append(job_kind)
+        if request_id is not None:
+            clauses.append("request_id = ?")
+            params.append(request_id)
+        query = """
+            SELECT job_id, request_id, job_kind, status, started_at, finished_at, summary_json
+            FROM jobs
+        """
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY started_at DESC LIMIT ?"
+        params.append(limit)
+        with self._connect() as connection:
+            connection.row_factory = sqlite3.Row
+            rows = connection.execute(query, tuple(params)).fetchall()
+        return tuple(self._job_record_from_row(row) for row in rows)
+
+    def get_job(self, *, job_id: str) -> JobRecord | None:
+        with self._connect() as connection:
+            connection.row_factory = sqlite3.Row
+            row = connection.execute(
+                """
+                SELECT job_id, request_id, job_kind, status, started_at, finished_at, summary_json
+                FROM jobs
+                WHERE job_id = ?
+                """,
+                (job_id,),
+            ).fetchone()
+        return None if row is None else self._job_record_from_row(row)
+
+    def list_job_events(self, *, job_id: str, limit: int = 200) -> tuple[JobEventRecord, ...]:
+        with self._connect() as connection:
+            connection.row_factory = sqlite3.Row
+            rows = connection.execute(
+                """
+                SELECT event_id, job_id, request_id, event_type, payload_json, created_at
+                FROM job_events
+                WHERE job_id = ?
+                ORDER BY created_at ASC
+                LIMIT ?
+                """,
+                (job_id, limit),
+            ).fetchall()
+        return tuple(self._job_event_record_from_row(row) for row in rows)
+
+    def list_reviews(
+        self,
+        *,
+        limit: int = 50,
+        status: ReviewStatus | None = None,
+        review_kind: str | None = None,
+    ) -> tuple[ReviewRecord, ...]:
+        clauses: list[str] = []
+        params: list[object] = []
+        if status is not None:
+            clauses.append("status = ?")
+            params.append(str(status))
+        if review_kind is not None:
+            clauses.append("review_kind = ?")
+            params.append(review_kind)
+        query = """
+            SELECT review_id, request_id, review_kind, status, target_json, target_summary,
+                   artifact_dir, created_at, updated_at
+            FROM reviews
+        """
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY updated_at DESC LIMIT ?"
+        params.append(limit)
+        with self._connect() as connection:
+            connection.row_factory = sqlite3.Row
+            rows = connection.execute(query, tuple(params)).fetchall()
+        return tuple(self._review_record_from_row(row) for row in rows)
+
+    def get_review(self, *, review_id: str) -> ReviewRecord | None:
+        with self._connect() as connection:
+            connection.row_factory = sqlite3.Row
+            row = connection.execute(
+                """
+                SELECT review_id, request_id, review_kind, status, target_json, target_summary,
+                       artifact_dir, created_at, updated_at
+                FROM reviews
+                WHERE review_id = ?
+                """,
+                (review_id,),
+            ).fetchone()
+        return None if row is None else self._review_record_from_row(row)
+
+    def list_review_actions(self, *, review_id: str) -> tuple[ReviewActionRecord, ...]:
+        with self._connect() as connection:
+            connection.row_factory = sqlite3.Row
+            rows = connection.execute(
+                """
+                SELECT action_id, review_id, action_type, operator_id, note, created_at
+                FROM review_actions
+                WHERE review_id = ?
+                ORDER BY created_at ASC
+                """,
+                (review_id,),
+            ).fetchall()
+        return tuple(self._review_action_record_from_row(row) for row in rows)
+
+    def list_artifacts(
+        self,
+        *,
+        parent_kind: str | None = None,
+        parent_id: str | None = None,
+        request_id: str | None = None,
+    ) -> tuple[ArtifactRecord, ...]:
+        clauses: list[str] = []
+        params: list[object] = []
+        if parent_kind is not None:
+            clauses.append("parent_kind = ?")
+            params.append(parent_kind)
+        if parent_id is not None:
+            clauses.append("parent_id = ?")
+            params.append(parent_id)
+        if request_id is not None:
+            clauses.append("request_id = ?")
+            params.append(request_id)
+        query = """
+            SELECT artifact_id, parent_kind, parent_id, request_id, artifact_kind,
+                   path, content_hash, created_at
+            FROM artifacts
+        """
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY created_at DESC"
+        with self._connect() as connection:
+            connection.row_factory = sqlite3.Row
+            rows = connection.execute(query, tuple(params)).fetchall()
+        return tuple(self._artifact_record_from_row(row) for row in rows)

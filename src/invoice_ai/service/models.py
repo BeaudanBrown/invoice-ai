@@ -4,6 +4,14 @@ from typing import Any
 
 from pydantic import Field
 
+from ..control_plane.models import (
+    ArtifactRecord,
+    JobEventRecord,
+    JobRecord,
+    RequestRecord,
+    ReviewActionRecord,
+    ReviewRecord,
+)
 from ..erp.schemas import ToolResponse
 from ..modeling import InvoiceAIModel
 
@@ -21,6 +29,7 @@ class RuntimeServiceView(InvoiceAIModel):
     public_url: str | None = None
     host_name: str | None = None
     base_url: str
+    operator_auth_configured: bool
 
 
 class RuntimeDependencyView(InvoiceAIModel):
@@ -35,6 +44,10 @@ class RuntimeResponse(InvoiceAIModel):
     service: RuntimeServiceView
     paths: dict[str, Any] = Field(default_factory=dict)
     dependencies: RuntimeDependencyView
+
+
+class OperatorView(InvoiceAIModel):
+    operator_id: str
 
 
 class ToolRunRequest(InvoiceAIModel):
@@ -64,3 +77,32 @@ class ErrorResponse(InvoiceAIModel):
 
 class ToolRunResponse(InvoiceAIModel):
     response: ToolResponse
+
+
+class RequestListResponse(InvoiceAIModel):
+    requests: tuple[RequestRecord, ...] = Field(default_factory=tuple)
+
+
+class RequestDetailResponse(InvoiceAIModel):
+    request: RequestRecord
+    job: JobRecord | None = None
+    artifacts: tuple[ArtifactRecord, ...] = Field(default_factory=tuple)
+
+
+class JobListResponse(InvoiceAIModel):
+    jobs: tuple[JobRecord, ...] = Field(default_factory=tuple)
+
+
+class JobDetailResponse(InvoiceAIModel):
+    job: JobRecord
+    events: tuple[JobEventRecord, ...] = Field(default_factory=tuple)
+
+
+class ReviewListResponse(InvoiceAIModel):
+    reviews: tuple[ReviewRecord, ...] = Field(default_factory=tuple)
+
+
+class ReviewDetailResponse(InvoiceAIModel):
+    review: ReviewRecord
+    actions: tuple[ReviewActionRecord, ...] = Field(default_factory=tuple)
+    artifacts: tuple[ArtifactRecord, ...] = Field(default_factory=tuple)

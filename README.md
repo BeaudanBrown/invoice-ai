@@ -52,6 +52,7 @@ Environment contract:
 - `INVOICE_AI_PORT`
 - `INVOICE_AI_PUBLIC_URL`
 - `INVOICE_AI_HOST_NAME`
+- `INVOICE_AI_OPERATOR_TOKENS_FILE`
 - `INVOICE_AI_STATE_DIR`
 - `INVOICE_AI_CONTROL_PLANE_DB_PATH`
 - `INVOICE_AI_DOCUMENTS_DIR`
@@ -167,8 +168,8 @@ The current weak points are:
 
 - thin ERP semantic coverage outside the first quote and purchase-invoice slice
 - extraction quality is still narrower than it needs to be for repeated real use, even though anomalies, duplicate checks, and record reprocessing now exist
-- auth is not enforced yet even though the service shell is now structured for it
-- the new local job/event ledger is not yet exposed through a fuller operator API
+- operator auth is currently bearer-token-file based only; there is no richer role or policy model yet
+- the operator API still lacks end-to-end review actions even though request, job, and review inspection are now exposed
 - no end-to-end approval actions through the operator surface yet
 - no disposable integration stack or broad end-to-end test suite yet
 - no actual `nix-dotfiles` deployment integration yet
@@ -186,12 +187,82 @@ Current endpoints:
 - `GET /healthz`
 - `GET /api/runtime`
 - `POST /api/tools/run`
+- `GET /api/requests`
+- `GET /api/requests/{request_id}`
+- `GET /api/jobs`
+- `GET /api/jobs/{job_id}`
+- `GET /api/reviews`
+- `GET /api/reviews/{review_id}`
 - `GET /docs`
 - `GET /openapi.json`
 
 `POST /api/tools/run` accepts the same JSON envelope used by `run-tool`. It may also include `write_approval_artifacts: true` at the top level to persist approval artifacts while executing the request.
 
-The FastAPI service also emits `X-Request-ID` on every response and accepts an optional `X-Operator-Id` header so auth and operator attribution can be added without changing the business layer.
+All `/api/*` endpoints now require `Authorization: Bearer <token>`, where the token is loaded from `INVOICE_AI_OPERATOR_TOKENS_FILE`. The service also emits `X-Request-ID` on every response and records the authenticated operator id into the control-plane store.
+
+The operator token file is JSON and currently has this shape:
+
+```json
+{
+  "operators": [
+    {
+      "operator_id": "local-dev",
+      "token": "replace-this-token"
+    }
+  ]
+}
+```
+
+## Fastest Local Test Loop
+
+There is not yet a one-command disposable integration stack. The fastest current user-level dev loop is:
+
+1. run against a temp state dir
+2. point `invoice-ai` at a tiny mock ERP HTTP server
+3. seed an operator token file
+4. call the FastAPI surface with fake data
+
+The minimum setup looks like:
+
+```bash
+tmp="$(mktemp -d)"
+cat >"$tmp/operators.json" <<'EOF'
+{
+  "operators": [
+    { "operator_id": "local-dev", "token": "dev-token" }
+  ]
+}
+EOF
+```
+
+Then run `invoice-ai` with a temp state dir and that operator file:
+
+```bash
+export INVOICE_AI_STATE_DIR="$tmp/state"
+export INVOICE_AI_OPERATOR_TOKENS_FILE="$tmp/operators.json"
+export INVOICE_AI_OLLAMA_URL="http://127.0.0.1:11434"
+nix run . -- serve-http
+```
+
+At that point you can hit the authenticated runtime and tool routes with:
+
+```bash
+curl -s \
+  -H 'Authorization: Bearer dev-token' \
+  http://127.0.0.1:4310/api/runtime
+```
+
+and then drive a fake quote or invoice request with `POST /api/tools/run`.
+
+Today, the fake-data path is real but still manual:
+
+- blank local state: yes
+- fake operator auth: yes
+- fake ERP backend: yes, by pointing `INVOICE_AI_ERPNEXT_URL` at a mock server
+- fake documents/text ingestion: yes
+- one-command disposable ERPNext stack: no, not yet
+
+The current gap is not the control plane. The missing piece is a first-class disposable ERP/dev fixture. That should be added during the end-to-end verification lane.
 
 ## Direction
 
@@ -211,6 +282,7 @@ The immediate project direction is:
 - `docs/completion-plan.md`
 - `docs/control-plane-hardening.md`
 - `docs/control-plane-store.md`
+- `docs/dev-testing.md`
 - `docs/schema-conventions.md`
 - `docs/foundation-spec.md`
 - `docs/erpnext-entity-map.md`

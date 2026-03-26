@@ -34,10 +34,12 @@ Current progress:
 - the schema hardening pass is complete, with `Pydantic` boundary models documented in `docs/schema-conventions.md`
 - the SQLite-backed metadata store is now in place for requests, jobs, events, reviews, artifacts, ingest indexes, memory suggestion indexes, and ERP-write idempotency fingerprints
 - the FastAPI/ASGI service migration is now in place over the store-backed runtime
+- bearer-token operator auth is now enforced on the `/api/*` surface from a host-provided token file
+- the operator API now exposes authenticated request, job, event, and review inspection endpoints over the control-plane store
 
 Acceptance:
 
-- the operator surface can inspect and act on review items without dropping to raw tool calls
+- the operator surface can inspect review items and execution history without dropping to raw tool calls
 - write actions are traceable and replay-safe
 - long-running operations have stable job state instead of only synchronous responses
 - the service boundary no longer depends on the stdlib HTTP server

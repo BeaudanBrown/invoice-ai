@@ -19,6 +19,10 @@ let
     INVOICE_AI_PORT = toString cfg.port;
     INVOICE_AI_PUBLIC_URL = cfg.publicUrl;
     INVOICE_AI_HOST_NAME = cfg.hostName;
+    INVOICE_AI_OPERATOR_TOKENS_FILE =
+      if cfg.operatorAuth.tokensFile != null
+      then toString cfg.operatorAuth.tokensFile
+      else null;
     INVOICE_AI_STATE_DIR = cfg.stateDir;
     INVOICE_AI_DOCUMENTS_DIR = cfg.documentsDir;
     INVOICE_AI_MEMORY_DIR = cfg.memoryDir;
@@ -75,6 +79,14 @@ in
       type = lib.types.nullOr lib.types.str;
       default = null;
       description = "Optional externally reachable base URL exposed by the host.";
+    };
+
+    operatorAuth = {
+      tokensFile = lib.mkOption {
+        type = lib.types.nullOr lib.types.path;
+        default = null;
+        description = "Host-provided JSON file containing bearer tokens mapped to operator ids for the FastAPI operator surface.";
+      };
     };
 
     environmentFile = lib.mkOption {

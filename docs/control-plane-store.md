@@ -44,13 +44,20 @@ The database is currently populated by:
 - quotation revision writes
 - memory suggestion and review actions
 
+The FastAPI operator surface now queries this store directly for:
+
+- request history
+- job/event history
+- review inspection
+- artifact references attached to requests and reviews
+
 ## Deliberate Limits
 
-The current store does not yet:
+The current store still does not:
 
-- enforce request authentication
-- expose a formal query API
 - manage background jobs beyond the current synchronous job ledger
 - replace the filesystem as the primary storage for bulky artifacts
+- provide retention and compaction policies yet
+- replace a fuller audit/event model for cross-process orchestration
 
-Those are follow-on hardening steps. The point of this slice is to make the control plane durable and queryable before the FastAPI/auth migration.
+Those remain follow-on hardening steps. The current point is to keep the control plane durable, queryable, and safe for an authenticated single-host operator service.

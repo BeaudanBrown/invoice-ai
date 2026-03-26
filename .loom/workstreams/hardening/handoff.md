@@ -18,9 +18,8 @@ Inherited completed work:
 
 ## Current Risks
 
-- service API is still missing enforced auth and fuller operator review surfaces
-- request/job metadata exists now, but it is not yet exposed through a broader operator API
-- operator review flows are incomplete
+- operator auth is now enforced, but it is still just a token-file boundary with no richer policy or role model
+- operator review flows are still incomplete beyond inspection
 - extraction quality still needs to improve beyond the new anomaly/dedupe/reprocess baseline
 - deployment and verification are still mostly mock-driven
 
@@ -51,12 +50,8 @@ Verification:
 
 Use the hardening Beads epic to drive:
 
-1. SQLite-backed control-plane store
-2. FastAPI operator service migration
-3. sales-invoice and ERP-surface completion
-4. review-action completion
-5. ingest robustness
-6. deployment and end-to-end verification
+1. review-action completion
+2. deployment and end-to-end verification
 
 ## Notes
 
@@ -148,3 +143,27 @@ Verification:
   - duplicate detection on repeated `ingest.normalize_supplier_invoice` requests
   - record replay through `ingest.reprocess_record`
   - ingest index metadata carrying source hash, supplier hint, and invoice reference
+
+Completed `coordinator-jdv.1` on 2026-03-26.
+
+Highlights:
+
+- added bearer-token operator auth sourced from `INVOICE_AI_OPERATOR_TOKENS_FILE`
+- enforced auth across the `/api/*` FastAPI surface
+- exposed authenticated request, job, event, and review inspection endpoints over the SQLite control-plane store
+- added typed control-plane query models for request/job/review inspection
+- documented the local dev loop for temp-state plus fake-data testing in `docs/dev-testing.md`
+- updated the NixOS module so host config can provide the operator token file declaratively
+
+Verification:
+
+- `nix shell .#python -c python -m compileall src`
+- `nix flake check`
+- live temp-state FastAPI probe covering:
+  - `GET /healthz`
+  - authenticated `GET /api/runtime`
+  - authenticated `POST /api/tools/run`
+  - authenticated `GET /api/requests`
+  - authenticated `GET /api/jobs`
+  - authenticated `GET /api/reviews`
+  - unauthenticated `/api/runtime` returning 401
