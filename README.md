@@ -18,6 +18,8 @@ Nix-native self-hosted AI invoicing workspace.
 - filesystem-backed approvals, revisions, and PDF preview artifacts
 - a local SQLite-backed control-plane metadata store for requests, jobs, reviews, artifacts, and idempotency indexes
 
+The current user-facing surface is still API-first. A phone-first installable operator UI is designed but not yet implemented.
+
 The repo is still incomplete as a product. The current stage is hardening and completion, not initial architecture discovery.
 
 ## Current Architecture
@@ -202,6 +204,24 @@ Current endpoints:
 
 All `/api/*` endpoints now require `Authorization: Bearer <token>`, where the token is loaded from `INVOICE_AI_OPERATOR_TOKENS_FILE`. The service also emits `X-Request-ID` on every response and records the authenticated operator id into the control-plane store.
 
+## Planned Operator UI
+
+The intended user-facing product is a small phone-first installable PWA:
+
+- chat-style layout
+- voice-to-text as a first-class input path
+- text input fallback
+- current-session draft revision flow
+- artifact preview and download
+
+That UI does not exist yet. The current implemented user-facing surface is still:
+
+- `POST /api/tools/run`
+- `/docs`
+- `/openapi.json`
+
+The design for the upcoming UI lives in `docs/operator-ui.md`.
+
 The operator token file is JSON and currently has this shape:
 
 ```json
@@ -279,6 +299,7 @@ The immediate project direction is:
 - `docs/erp-tool-schemas.md`
 - `docs/agent-architecture.md`
 - `docs/memory.md`
+- `docs/operator-ui.md`
 - `docs/nixos-module-contract.md`
 - `docs/storage-layout.md`
 - `docs/orchestrator-contract.md`

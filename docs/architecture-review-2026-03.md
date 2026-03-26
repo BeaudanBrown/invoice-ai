@@ -19,6 +19,10 @@ The repo already has a coherent control-plane split:
 
 That is a solid base. The weak sections are mostly about product completion, service hardening, and operational rigor.
 
+One additional gap is now explicit:
+
+- there is still no actual operator-facing UI, only an operator API
+
 ## Strong Sections
 
 ### ERP-First Boundary
@@ -48,24 +52,27 @@ The project is already packaged as a flake with a NixOS module boundary. That ke
 
 ## Weak Sections
 
-### 1. Control Plane Is Not Hardened Yet
+### 1. Control Plane Hardening Is Better, But Not Finished
 
-The service in `src/invoice_ai/service/http.py` is still a thin tool-execution API. It is missing:
+The operator service is now much stronger than the original scaffold:
 
-- authentication
-- explicit operator/session identity
-- structured audit events
-- idempotency guards for write requests
-- long-running workflow tracking
+- `FastAPI` is in place
+- authenticated operator boundaries exist
+- request, job, event, review, and artifact metadata are recorded in the local SQLite control-plane store
+- ERP write-style idempotency fingerprints exist
 
-This is the biggest runtime weakness.
+The remaining weakness is that the control plane is still incomplete as an operator product surface. It still needs:
 
-The concrete hardening direction for this section is now:
+- richer session handling for the upcoming UI
+- artifact-serving endpoints rather than filesystem-path-only contracts
+- more explicit long-running workflow semantics where the service grows beyond simple request/response flows
+
+The concrete hardening direction for this section remains:
 
 - keep Python for v1
-- replace the service shell with `FastAPI`
-- add a local SQLite-backed control-plane store
-- tighten typed boundary models instead of relying on freeform dict traffic
+- keep `FastAPI` as the operator boundary
+- keep the SQLite control-plane store as the queryable metadata layer
+- continue tightening typed boundary models instead of relying on freeform dict traffic
 
 ### 2. Sales-Invoice Path Is Missing
 
@@ -106,6 +113,18 @@ The current checks are useful, but they are still mostly scaffold-grade:
 - mocked ERP flows
 
 What is missing is a disposable end-to-end verification path that exercises the real service against a realistic stack.
+
+### 7. There Is No User-Facing Operator UI Yet
+
+The current stack is usable through HTTP and CLI, but not yet through the phone-first interface the product actually wants.
+
+What is missing is:
+
+- an installable PWA shell
+- a voice-first text-entry experience
+- artifact viewing and download over HTTP
+- deterministic summary rendering over structured backend results
+- session handling for current draft revision flows
 
 ## Decisions For The Next Phase
 
@@ -176,6 +195,7 @@ These decisions imply the following roadmap:
 3. finish the operator review surface
 4. strengthen extraction and duplicate-safe ingest
 5. add end-to-end deployment and verification
+6. add the first operator-facing installable UI
 
 ## Non-Decision
 

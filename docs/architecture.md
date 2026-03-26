@@ -43,6 +43,17 @@ Target flow:
 4. update purchase history and pricing intelligence through ERP-first flows
 5. surface anomalies, duplicates, and confidence gaps for review
 
+### Phone-First Operator UI
+
+Target flow:
+
+1. the operator opens an installable PWA on their phone
+2. the operator speaks or types a short request
+3. voice is transcribed to text in the UI before submission
+4. the UI sends the turn to the planner/orchestrator path
+5. the UI renders a short summary plus the current artifact and any review actions
+6. follow-up turns revise the current draft without requiring the operator to restate document ids
+
 ## Operating Rules
 
 - the user-facing experience is one main chat agent
@@ -72,6 +83,7 @@ Target flow:
 - `docs/erp-tool-schemas.md`
 - `docs/agent-architecture.md`
 - `docs/memory.md`
+- `docs/operator-ui.md`
 - `docs/nixos-module-contract.md`
 - `docs/storage-layout.md`
 - `docs/vertical-slice-1.md`

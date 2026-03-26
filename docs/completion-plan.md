@@ -142,6 +142,33 @@ Current progress:
 - the local CLI/operator dev path no longer requires pre-running `init-paths` or setting `INVOICE_AI_ERPNEXT_URL` for review-only flows
 - remaining work in this stage is host integration, retention/cleanup behavior, and proving the same flows against a more realistic dependency stack than the current mocks
 
+## Stage 6: Operator UI
+
+Objective:
+
+- turn the operator API into the phone-first installable product surface
+
+Required outcomes:
+
+- installable PWA shell
+- text input plus speech-to-text input
+- session-scoped chat-style interaction
+- deterministic summary/result rendering over planner/orchestrator responses
+- artifact preview/download HTTP support
+- review cards and actions through the UI
+
+Acceptance:
+
+- a user can open the app on a phone, speak a request, and receive a quote or invoice artifact
+- the same user can revise the current draft through follow-up voice or text turns
+- the UI does not require direct ERP usage for the main loop
+
+Current progress:
+
+- the backend operator API exists
+- the planner/orchestrator path already supports quote, invoice, supplier-intake, and review flows
+- no actual user-facing UI exists yet
+
 ## Prioritization
 
 The recommended order is:
@@ -151,6 +178,7 @@ The recommended order is:
 3. review-action completion
 4. ingest hardening
 5. deployment and verification
+6. operator UI
 
 Reason:
 
@@ -175,3 +203,4 @@ This phase is complete when:
 3. the runtime has auth, auditability, idempotent write handling, and stable job records
 4. the NixOS module is exercised through `nix-dotfiles`
 5. real end-to-end verification exists beyond mocks
+6. a user-facing installable operator UI exists for the main quote/invoice loop

@@ -22,6 +22,7 @@ Inherited completed work:
 - operator review flows are now complete for the current memory-backed review type, but broader approval classes still need to converge onto the same operator contract
 - extraction quality still needs to improve beyond the new anomaly/dedupe/reprocess baseline
 - deployment and verification are still mostly mock-driven
+- the product still has no actual operator-facing installable UI
 
 ## Latest Completed Slice
 
@@ -51,6 +52,7 @@ Verification:
 Use the hardening Beads epic to drive:
 
 1. deployment and end-to-end verification
+2. the first operator-facing installable UI
 
 ## Notes
 
@@ -59,6 +61,7 @@ Use the hardening Beads epic to drive:
 - the current completion roadmap is in `docs/completion-plan.md`
 - the concrete service/store/schema decisions are in `docs/control-plane-hardening.md`
 - the live schema conventions are in `docs/schema-conventions.md`
+- the phone-first UI design is now in `docs/operator-ui.md`
 
 Completed `coordinator-jdv.1.2` on 2026-03-26.
 
