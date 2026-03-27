@@ -839,6 +839,11 @@ in
             install -d -m 0700 -o root -g root ${erpCfg.database.dataDir}
             install -d -m 0700 -o root -g root ${erpCfg.redis.cacheDataDir}
             install -d -m 0700 -o root -g root ${erpCfg.redis.queueDataDir}
+            if [ ! -f ${erpCfg.volumes.sitesDir}/common_site_config.json ]; then
+              printf '{}\n' > ${erpCfg.volumes.sitesDir}/common_site_config.json
+            fi
+            chown ${toString erpRuntimeUid}:${toString erpRuntimeGid} ${erpCfg.volumes.sitesDir}/common_site_config.json
+            chmod 0660 ${erpCfg.volumes.sitesDir}/common_site_config.json
             podman network exists ${erpNetwork} || podman network create ${erpNetwork}
           '';
         };
