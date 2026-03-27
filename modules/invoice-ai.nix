@@ -596,17 +596,24 @@ in
         description = "invoice-ai control-plane service";
         wantedBy = [ "multi-user.target" ];
         after =
-          [ "network-online.target" ]
+          [
+            "network-online.target"
+            "invoice-ai-prepare-paths.service"
+          ]
           ++ lib.optionals erpEnabled [
             "invoice-ai-erpnext-apply-site-config.service"
             "podman-erpnext-frontend.service"
           ];
         wants =
-          [ "network-online.target" ]
+          [
+            "network-online.target"
+            "invoice-ai-prepare-paths.service"
+          ]
           ++ lib.optionals erpEnabled [
             "invoice-ai-erpnext-apply-site-config.service"
             "podman-erpnext-frontend.service"
           ];
+        requires = [ "invoice-ai-prepare-paths.service" ];
         environment = runtimeEnvironment;
         serviceConfig = {
           Type = "simple";
@@ -615,11 +622,44 @@ in
           WorkingDirectory = cfg.stateDir;
           ExecStartPre = "${cfg.package}/bin/invoice-ai init-paths";
           ExecStart = "${cfg.package}/bin/invoice-ai serve-http";
+          ReadWritePaths = [
+            cfg.stateDir
+            cfg.documentsDir
+            cfg.memoryDir
+            cfg.ingestDir
+            cfg.approvalsDir
+            cfg.revisionsDir
+            cfg.artifactsDir
+            cfg.cacheDir
+          ];
           Restart = "on-failure";
           RestartSec = 5;
         };
         serviceConfig.EnvironmentFile =
           lib.optional (cfg.environmentFile != null) cfg.environmentFile;
+      };
+
+      systemd.services.invoice-ai-prepare-paths = {
+        description = "invoice-ai runtime path preparation";
+        wantedBy = [ "multi-user.target" ];
+        before = [ "invoice-ai.service" ];
+        path = [ pkgs.coreutils ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+        script = ''
+          set -euo pipefail
+
+          install -d -m 0750 -o ${cfg.user} -g ${cfg.group} ${cfg.stateDir}
+          install -d -m 0750 -o ${cfg.user} -g ${cfg.group} ${cfg.documentsDir}
+          install -d -m 0750 -o ${cfg.user} -g ${cfg.group} ${cfg.memoryDir}
+          install -d -m 0750 -o ${cfg.user} -g ${cfg.group} ${cfg.ingestDir}
+          install -d -m 0750 -o ${cfg.user} -g ${cfg.group} ${cfg.approvalsDir}
+          install -d -m 0750 -o ${cfg.user} -g ${cfg.group} ${cfg.revisionsDir}
+          install -d -m 0750 -o ${cfg.user} -g ${cfg.group} ${cfg.artifactsDir}
+          install -d -m 0750 -o ${cfg.user} -g ${cfg.group} ${cfg.cacheDir}
+        '';
       };
     }
 
@@ -781,13 +821,22 @@ in
           ] ++ erpBackendServiceUnits;
           after = [ "podman.service" ];
           requires = [ "podman.service" ];
-          path = [ config.virtualisation.podman.package ];
+          path = [
+            config.virtualisation.podman.package
+            pkgs.coreutils
+          ];
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
           };
           script = ''
             set -euo pipefail
+            install -d -m 0750 -o root -g root ${erpCfg.volumes.stateDir}
+            install -d -m 0750 -o root -g root ${erpCfg.volumes.sitesDir}
+            install -d -m 0750 -o root -g root ${erpCfg.volumes.logsDir}
+            install -d -m 0700 -o root -g root ${erpCfg.database.dataDir}
+            install -d -m 0700 -o root -g root ${erpCfg.redis.cacheDataDir}
+            install -d -m 0700 -o root -g root ${erpCfg.redis.queueDataDir}
             podman network exists ${erpNetwork} || podman network create ${erpNetwork}
           '';
         };
