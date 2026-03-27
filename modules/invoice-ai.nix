@@ -116,8 +116,8 @@ let
     text = ''
       set -euo pipefail
 
-      site_config="${erpCfg.volumes.sitesDir}/${erpCfg.siteName}/site_config.json"
-      if [ -f "$site_config" ]; then
+      bootstrap_marker="${erpCfg.volumes.sitesDir}/${erpCfg.siteName}/.invoice-ai-bootstrap-complete"
+      if [ -f "$bootstrap_marker" ]; then
         exit 0
       fi
 
@@ -179,6 +179,8 @@ let
             --install-app erpnext \
             --set-default \
             "$SITE_NAME"
+
+          touch "sites/$SITE_NAME/.invoice-ai-bootstrap-complete"
         '
     '';
   };
