@@ -6,6 +6,8 @@ let
   erpNetwork = "invoice-ai-erpnext";
   erpRuntimeUid = 1000;
   erpRuntimeGid = 1000;
+  mariadbRuntimeUid = 999;
+  mariadbRuntimeGid = 999;
   erpImage = "${erpCfg.image}:${erpCfg.version}";
   mariadbImage = "${erpCfg.database.image}:${erpCfg.database.version}";
   redisImage = "${erpCfg.redis.image}:${erpCfg.redis.version}";
@@ -672,7 +674,7 @@ in
         "d ${erpCfg.volumes.stateDir} 0750 root root - -"
         "d ${erpCfg.volumes.sitesDir} 0770 ${toString erpRuntimeUid} ${toString erpRuntimeGid} - -"
         "d ${erpCfg.volumes.logsDir} 0770 ${toString erpRuntimeUid} ${toString erpRuntimeGid} - -"
-        "d ${erpCfg.database.dataDir} 0700 root root - -"
+        "d ${erpCfg.database.dataDir} 0700 ${toString mariadbRuntimeUid} ${toString mariadbRuntimeGid} - -"
         "d ${erpCfg.redis.cacheDataDir} 0700 root root - -"
         "d ${erpCfg.redis.queueDataDir} 0700 root root - -"
       ];
@@ -836,7 +838,7 @@ in
             install -d -m 0750 -o root -g root ${erpCfg.volumes.stateDir}
             install -d -m 0770 -o ${toString erpRuntimeUid} -g ${toString erpRuntimeGid} ${erpCfg.volumes.sitesDir}
             install -d -m 0770 -o ${toString erpRuntimeUid} -g ${toString erpRuntimeGid} ${erpCfg.volumes.logsDir}
-            install -d -m 0700 -o root -g root ${erpCfg.database.dataDir}
+            install -d -m 0700 -o ${toString mariadbRuntimeUid} -g ${toString mariadbRuntimeGid} ${erpCfg.database.dataDir}
             install -d -m 0700 -o root -g root ${erpCfg.redis.cacheDataDir}
             install -d -m 0700 -o root -g root ${erpCfg.redis.queueDataDir}
             if [ ! -f ${erpCfg.volumes.sitesDir}/common_site_config.json ]; then
