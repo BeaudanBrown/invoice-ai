@@ -4,6 +4,8 @@ let
   erpCfg = cfg.erpnext;
   erpEnabled = cfg.enable && erpCfg.mode == "embedded";
   erpNetwork = "invoice-ai-erpnext";
+  erpRuntimeUid = 1000;
+  erpRuntimeGid = 1000;
   erpImage = "${erpCfg.image}:${erpCfg.version}";
   mariadbImage = "${erpCfg.database.image}:${erpCfg.database.version}";
   redisImage = "${erpCfg.redis.image}:${erpCfg.redis.version}";
@@ -668,8 +670,8 @@ in
 
       systemd.tmpfiles.rules = [
         "d ${erpCfg.volumes.stateDir} 0750 root root - -"
-        "d ${erpCfg.volumes.sitesDir} 0750 root root - -"
-        "d ${erpCfg.volumes.logsDir} 0750 root root - -"
+        "d ${erpCfg.volumes.sitesDir} 0770 ${toString erpRuntimeUid} ${toString erpRuntimeGid} - -"
+        "d ${erpCfg.volumes.logsDir} 0770 ${toString erpRuntimeUid} ${toString erpRuntimeGid} - -"
         "d ${erpCfg.database.dataDir} 0700 root root - -"
         "d ${erpCfg.redis.cacheDataDir} 0700 root root - -"
         "d ${erpCfg.redis.queueDataDir} 0700 root root - -"
@@ -832,8 +834,8 @@ in
           script = ''
             set -euo pipefail
             install -d -m 0750 -o root -g root ${erpCfg.volumes.stateDir}
-            install -d -m 0750 -o root -g root ${erpCfg.volumes.sitesDir}
-            install -d -m 0750 -o root -g root ${erpCfg.volumes.logsDir}
+            install -d -m 0770 -o ${toString erpRuntimeUid} -g ${toString erpRuntimeGid} ${erpCfg.volumes.sitesDir}
+            install -d -m 0770 -o ${toString erpRuntimeUid} -g ${toString erpRuntimeGid} ${erpCfg.volumes.logsDir}
             install -d -m 0700 -o root -g root ${erpCfg.database.dataDir}
             install -d -m 0700 -o root -g root ${erpCfg.redis.cacheDataDir}
             install -d -m 0700 -o root -g root ${erpCfg.redis.queueDataDir}
